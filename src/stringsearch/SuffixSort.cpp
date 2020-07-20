@@ -9,6 +9,12 @@ namespace stringsearch {
 		const std::byte * ptr_;
 
 	public:
+		using value_type = const std::byte;
+		using pointer = const std::byte *;
+		using reference = const std::byte &;
+		using difference_type = ptrdiff_t;
+		using iterator_category = std::forward_iterator_tag;
+		
 		explicit Utf16TextIterator(const std::byte *ptr)
 			: ptr_(ptr) {}
 
