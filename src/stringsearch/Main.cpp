@@ -4,8 +4,6 @@
 #include <numeric>
 #include <algorithm>
 
-#include <Windows.h>
-
 static void PrintSuffixArrayLine(std::wostream &str, const int index, const int suffix, const std::wstring_view characters) {
 	const auto suffixStr = characters.substr(suffix, std::min<size_t>(characters.length() - suffix, 50));
 	str << index << ": " << suffix << ' ' << suffixStr;
@@ -32,6 +30,10 @@ int main() {
    return 0;
 }
 
+// Unresolved external WinMain
+#ifdef WIN32
+#include <Windows.h>
+
 int CALLBACK WinMain(
     HINSTANCE   hInstance,
     HINSTANCE   hPrevInstance,
@@ -40,3 +42,5 @@ int CALLBACK WinMain(
     ) {
 	main();
 }
+
+#endif
