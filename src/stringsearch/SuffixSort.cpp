@@ -1,8 +1,8 @@
 #include "stringsearch/SuffixSort.hpp"
+#include <algorithm>
 #include <numeric>
 #include <array>
 #include <vector>
-#include <ios>
 
 namespace stringsearch {
 	class Utf16TextIterator {
