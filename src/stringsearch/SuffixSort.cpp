@@ -40,15 +40,15 @@ namespace stringsearch {
 		return static_cast<size_t>(*(text + 2 * size_t(suffix)));
 	}
 
-	void Count(const std::byte *const text, const std::span<const Index> sa, const std::span<Index> buckets) {
+	void Count(const std::byte *const text, const Span<const Index> sa, const Span<Index> buckets) {
 		for(const auto suffix : sa) {
 			const auto bucket = ToBucketIndex(text, suffix);
 			buckets[bucket]++;
 		}
 	}
 
-	void MoveElements(const std::byte *const text, const std::span<Index> bucketStarts, const std::span<Index> buffer,
-							const std::span<Index> sa) {
+	void MoveElements(const std::byte *const text, const Span<Index> bucketStarts, const Span<Index> buffer,
+							const Span<Index> sa) {
 		for(const auto suffix : sa) {
 			const auto bucket = ToBucketIndex(text, suffix);
 			const auto off = bucketStarts[bucket]++;
@@ -58,7 +58,7 @@ namespace stringsearch {
 		std::copy(buffer.begin(), buffer.end(), sa.begin());
 	}
 
-	void MoveElementsInPlace(const std::byte *const text, const std::span<Index> bucketStarts, const std::span<Index> sa) {
+	void MoveElementsInPlace(const std::byte *const text, const Span<Index> bucketStarts, const Span<Index> sa) {
 		for(auto it = sa.begin(); it != sa.end();) {
 			const auto suffix = *it;
 			const auto bucket = ToBucketIndex(text, suffix);
@@ -80,7 +80,7 @@ namespace stringsearch {
 		}
 	}
 
-	void SuffixSortStd(const std::byte *const text, const std::span<Index> sa) {
+	void SuffixSortStd(const std::byte *const text, const Span<Index> sa) {
 		std::sort(sa.begin(), sa.end(), [&](const Index a, const Index b) {
 			return std::lexicographical_compare(
 				Utf16TextIterator(text + 2 * size_t(a)), Utf16TextIterator(nullptr), 
@@ -90,7 +90,7 @@ namespace stringsearch {
 	}
 
 	template<typename F>
-	void DispatchBuckets(const std::byte *nextText, const std::array<Index, 0x100> &buckets, const std::span<Index> sa, F &&f) {
+	void DispatchBuckets(const std::byte *nextText, const std::array<Index, 0x100> &buckets, const Span<Index> sa, F &&f) {
 		auto last = 0;//isOddAddress ? 0 : buckets[0];
 
 		for(auto v : buckets) {
@@ -104,28 +104,28 @@ namespace stringsearch {
 	}
 
 	struct SharedBuffer {
-		const std::span<Index> Buffer;
+		const Span<Index> Buffer;
 
-		void moveElements(const std::byte *const text, const std::span<Index> bucketStarts, const std::span<Index> sa) const {
+		void moveElements(const std::byte *const text, const Span<Index> bucketStarts, const Span<Index> sa) const {
 			MoveElements(text, bucketStarts, Buffer.subspan(0, sa.size()), sa);
 		}
 	};
 
 	struct OwnBuffer {
-		void moveElements(const std::byte *const text, const std::span<Index> bucketStarts, const std::span<Index> sa) const {
+		void moveElements(const std::byte *const text, const Span<Index> bucketStarts, const Span<Index> sa) const {
 			std::vector<Index> buffer(sa.size());
 			MoveElements(text, bucketStarts, buffer, sa);
 		}
 	};
 
 	struct InPlace {
-		void moveElements(const std::byte *const text, const std::span<Index> bucketStarts, const std::span<Index> sa) const {
+		void moveElements(const std::byte *const text, const Span<Index> bucketStarts, const Span<Index> sa) const {
 			MoveElementsInPlace(text, bucketStarts, sa);
 		}
 	};
 
 	template<typename Derived>
-	void SuffixSort(const std::byte *const text, const std::span<Index> sa, Derived derived) {
+	void SuffixSort(const std::byte *const text, const Span<Index> sa, Derived derived) {
 		std::array<Index, 0x100> buckets{};
 
 		Count(text, sa, buckets);
@@ -143,13 +143,13 @@ namespace stringsearch {
 		std::exclusive_scan(buckets.begin(), buckets.end(), buckets.begin(), Index(0));
 		derived.moveElements(text, buckets, sa);
 
-		DispatchBuckets(nextText, buckets, sa, [&](const std::byte *const t, const std::span<Index> s) {
+		DispatchBuckets(nextText, buckets, sa, [&](const std::byte *const t, const Span<Index> s) {
 			SuffixSort(t, s, derived);
 		});
 	}
 
 	template<typename Derived>
-	void SuffixSortMax(const std::byte *const text, const std::span<Index> sa, const size_t max, Derived derived) {
+	void SuffixSortMax(const std::byte *const text, const Span<Index> sa, const size_t max, Derived derived) {
 		if(sa.size() < max) {
 			SuffixSortStd(text, sa);
 			return;
@@ -172,40 +172,40 @@ namespace stringsearch {
 		std::exclusive_scan(buckets.begin(), buckets.end(), buckets.begin(), Index(0));
 		derived.moveElements(text, buckets, sa);
 
-		DispatchBuckets(nextText, buckets, sa, [&](const std::byte *const t, const std::span<Index> s) {
+		DispatchBuckets(nextText, buckets, sa, [&](const std::byte *const t, const Span<Index> s) {
 			SuffixSortMax<Derived>(t, s, max, derived);
 		});
 	}
 
-	void SuffixSortStd(const wchar_t *characters, const std::span<Index> sa) {
+	void SuffixSortStd(const wchar_t *characters, const Span<Index> sa) {
 		SuffixSortStd(reinterpret_cast<const std::byte*>(characters) + 1, sa);
 	}
 	
-	void SuffixSortSharedBuffer(const wchar_t *characters, const std::span<Index> sa) {
+	void SuffixSortSharedBuffer(const wchar_t *characters, const Span<Index> sa) {
 		std::vector<Index> buffer(sa.size());
 		SuffixSort(reinterpret_cast<const std::byte*>(characters) + 1, sa, SharedBuffer{buffer});
 	}
 
-	void SuffixSortOwnBuffer(const wchar_t *characters, const std::span<Index> sa) {
+	void SuffixSortOwnBuffer(const wchar_t *characters, const Span<Index> sa) {
 		SuffixSort(reinterpret_cast<const std::byte*>(characters) + 1, sa, OwnBuffer());
 	}
 
-	void SuffixSortInPlace(const wchar_t *characters, const std::span<Index> sa) {
+	void SuffixSortInPlace(const wchar_t *characters, const Span<Index> sa) {
 		SuffixSort(reinterpret_cast<const std::byte*>(characters) + 1, sa, InPlace());
 	}
 
-	void SuffixSortSharedBufferMax(const wchar_t *characters, const std::span<Index> sa, const size_t max) {
+	void SuffixSortSharedBufferMax(const wchar_t *characters, const Span<Index> sa, const size_t max) {
 		std::vector<Index> buffer(sa.size());
 		SuffixSortMax(reinterpret_cast<const std::byte*>(characters) + 1, sa, max, SharedBuffer{buffer});
 	}
 
-	void SuffixSortOwnBufferMax(const wchar_t *characters, const std::span<Index> sa, const size_t max) {
+	void SuffixSortOwnBufferMax(const wchar_t *characters, const Span<Index> sa, const size_t max) {
 		SuffixSortMax(reinterpret_cast<const std::byte*>(characters) + 1, sa, max, OwnBuffer());
 	}
 
-	void SuffixSortInPlaceMax(const wchar_t *characters, const std::span<Index> sa, const size_t max) {
+	void SuffixSortInPlaceMax(const wchar_t *characters, const Span<Index> sa, const size_t max) {
 		const auto ptr = reinterpret_cast<const std::byte*>(characters);
-		//std::span<const std::byte>(ptr, );
+		//Span<const std::byte>(ptr, );
 		SuffixSortMax(ptr + 1, sa, max, InPlace());
 	}
 }

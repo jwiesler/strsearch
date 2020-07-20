@@ -1,7 +1,6 @@
 #include <benchmark/benchmark.h>
 #include <numeric>
 #include <fstream>
-#include <span>
 #include "stringsearch/SuffixSort.hpp"
 #include <array>
 
@@ -16,7 +15,7 @@ static std::wstring CharactersFromFile(const char *name, size_t count) {
 	return res;
 }
 
-static std::wstring CharactersFromStrings(const std::span<const std::wstring_view> strs) {
+static std::wstring CharactersFromStrings(const stringsearch::Span<const std::wstring_view> strs) {
 	std::wstring res;
 	for (auto& str : strs) {
 		res += str;

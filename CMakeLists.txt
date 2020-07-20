@@ -35,6 +35,7 @@ file(GLOB_RECURSE HEADERS "include/stringsearch/*.hpp")
 set(BUILD_SHARED_LIBS ON)
 
 add_library(libstrsearch STATIC "src/stringsearch/Search.cpp" "src/stringsearch/SuffixSort.cpp")
+target_include_directories(libstrsearch PUBLIC "span/include")
 target_include_directories(libstrsearch PUBLIC "include")
 target_include_directories(libstrsearch PRIVATE "src")
 include(CMakePrintHelpers)
@@ -57,7 +58,7 @@ add_custom_command(TARGET libstrsearch PRE_BUILD
                        ${CMAKE_SOURCE_DIR}/testfiles $<TARGET_FILE_DIR:libstrsearch>)
 
 add_executable(perfstrsearch "src/stringsearch/PerformanceTests.cpp")
-target_include_directories(perfstrsearch PUBLIC SYSTEM "${CMAKE_BINARY_DIR}/gbench/gbench-src/include")
+#target_include_directories(perfstrsearch PUBLIC SYSTEM "${CMAKE_BINARY_DIR}/gbench/gbench-src/include")
 target_link_libraries(perfstrsearch libstrsearch benchmark::benchmark)
 
 link_directories(${CMAKE_BINARY_DIR})
