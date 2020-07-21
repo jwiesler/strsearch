@@ -23,7 +23,7 @@ int main() {
 	stringsearch::SuffixSortInPlace(characters.data(), sa);
 
 	for(size_t i = 0; i < sa.size(); ++i) {
-		PrintSuffixArrayLine(std::wcout, i, sa[i], characters);
+		PrintSuffixArrayLine(std::wcout, int(i), sa[i], characters);
 		std::wcout << '\n';
 	}
 	

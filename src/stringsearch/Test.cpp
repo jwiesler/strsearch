@@ -10,8 +10,8 @@ constexpr wchar_t TestCharArray[] = { L'A', L'\0', L'B', L'B', L'\0', L'C', L'C'
 constexpr auto TestString = std::wstring_view(TestCharArray, std::size(TestCharArray));
 
 using namespace stringsearch;
-TEST_CASE("getters", "[ItemsArray]") {
-	const ItemsArray array(TestString);
+TEST_CASE("ItemsLookup getters work", "[ItemsLookup]") {
+	const ItemsLookup array(TestString);
 
 	SECTION("getItem") {
 		REQUIRE(array.getItem(0) == 0);
@@ -33,9 +33,16 @@ TEST_CASE("getters", "[ItemsArray]") {
 	SECTION("itemCount") {
 		REQUIRE(array.itemCount() == 5);
 	}
+}
 
-	SECTION("getItemEnd") {
+TEST_CASE("OldUniqueSearchLookup getters work", "[OldUniqueSearchLookup]") {
+	const OldUniqueSearchLookup array(TestString);
+
+	SECTION("itemCount") {
 		REQUIRE(array.itemCount() == 5);
+	}
+	
+	SECTION("getItemEnd") {	
 		REQUIRE(array.getItemEnd(0) == 1);
 		REQUIRE(array.getItemEnd(1) == 4);
 		REQUIRE(array.getItemEnd(2) == 8);
@@ -44,8 +51,8 @@ TEST_CASE("getters", "[ItemsArray]") {
 	}
 }
 
-TEST_CASE("makeUnique", "[ItemsArray]") {
-	const ItemsArray array(TestString);
+TEST_CASE("makeUnique", "[OldUniqueSearchLookup]") {
+	const OldUniqueSearchLookup array(TestString);
 
 	SECTION("makeUniqueFull") {
 		std::array<Index, 9> indicesArray {
@@ -112,8 +119,9 @@ TEST_CASE("bound", "[SuffixArray]") {
 	}
 }
 
-TEST_CASE("findUnique", "[Search]") {
-	const Search array(TestString);
+TEST_CASE("OldUniqueSearchLookup findUnique", "[OldUniqueSearchLookup]") {
+	const SuffixArray array(TestString);
+	const OldUniqueSearchLookup oldSearch(TestString);
 
 	SECTION("full") {
 		const auto [pattern, consumed, foundCount, resultIndex] = GENERATE(Catch::Generators::table<std::wstring_view, size_t, size_t, Index>({
@@ -125,7 +133,8 @@ TEST_CASE("findUnique", "[Search]") {
 		}));
 		
 		std::array<Index, 10> output{};
-		auto res = array.findUnique(pattern, output);
+		const auto findResult = array.find(TestString, pattern);
+		const auto res = oldSearch.findUnique(findResult, output);
 		REQUIRE(res.Consumed == consumed);
 		REQUIRE(res.Count == foundCount);
 		REQUIRE(resultIndex == output[0]);
@@ -141,7 +150,8 @@ TEST_CASE("findUnique", "[Search]") {
 		}));
 		
 		std::array<Index, 1> output{};
-		auto res = array.findUnique(pattern, output);
+		const auto findResult = array.find(TestString, pattern);
+		const auto res = oldSearch.findUnique(findResult, output);
 		REQUIRE(res.Consumed == partialConsumed);
 		REQUIRE(res.Count == partialFound);
 	}
@@ -150,8 +160,76 @@ TEST_CASE("findUnique", "[Search]") {
 		const auto [pattern, partialConsumed, partialFound] = std::make_tuple(L"C"sv, 3, 1);
 		
 		std::array<Index, 2> output{};
-		auto res = array.findUnique(pattern, output);
+		const auto findResult = array.find(TestString, pattern);
+		const auto res = oldSearch.findUnique(findResult, output);
 		REQUIRE(res.Consumed == partialConsumed);
 		REQUIRE(res.Count == partialFound);
 	}
+}
+
+TEST_CASE("UniqueSearchLookup findUnique", "[UniqueSearchLookup]") {
+	const SuffixArray array(TestString);
+	const UniqueSearchLookup search(TestString, array);
+
+	SECTION("full") {
+		const auto [pattern, consumed, foundCount, resultIndex] = GENERATE(Catch::Generators::table<std::wstring_view, size_t, size_t, Index>({
+			std::make_tuple(L"A"sv, 1, 1, 0),
+			std::make_tuple(L"B"sv, 2, 1, 3),
+			std::make_tuple(L"C"sv, 3, 1, 7),
+			std::make_tuple(L"D"sv, 2, 1, 10),
+			std::make_tuple(L"E"sv, 1, 1, 12)
+		}));
+		
+		std::array<Index, 10> output{};
+		const auto result = array.find(TestString, pattern);
+		const auto res = search.findUnique(result, output);
+		REQUIRE(res.Consumed == consumed);
+		REQUIRE(res.Count == foundCount);
+		REQUIRE(resultIndex == output[0]);
+	}
+
+	SECTION("partial") {
+		const auto [pattern, partialConsumed, partialFound] = GENERATE(Catch::Generators::table<std::wstring_view, size_t, size_t>({
+			std::make_tuple(L"A"sv, 1, 1),
+			std::make_tuple(L"B"sv, 2, 1),
+			std::make_tuple(L"C"sv, 3, 1),
+			std::make_tuple(L"D"sv, 2, 1),
+			std::make_tuple(L"E"sv, 1, 1)
+		}));
+		
+		std::array<Index, 1> output{};
+		const auto result = array.find(TestString, pattern);
+		const auto res = search.findUnique(result, output);
+		REQUIRE(res.Consumed == partialConsumed);
+		REQUIRE(res.Count == partialFound);
+	}
+
+	SECTION("partial-repeated") {
+		const auto [pattern, partialConsumed, partialFound] = std::make_tuple(L"C"sv, 3, 1);
+		
+		std::array<Index, 2> output{};
+		const auto result = array.find(TestString, pattern);
+		const auto res = search.findUnique(result, output);
+		REQUIRE(res.Consumed == partialConsumed);
+		REQUIRE(res.Count == partialFound);
+	}
+}
+
+TEST_CASE("iterate", "[UniqueItemsIterator]") {
+	const SuffixArray array(TestString);
+	const UniqueSearchLookup lookup(TestString, array);
+
+	UniqueItemsIterator it(FindResult(array.begin(), array.end()), lookup);
+	UniqueItemsIteratorEnd end;
+	REQUIRE(it != end);
+	REQUIRE(*it == 13);
+	REQUIRE(++it != end);
+	REQUIRE(*it == 1);
+	REQUIRE(++it != end);
+	REQUIRE(*it == 4);
+	REQUIRE(++it != end);
+	REQUIRE(*it == 8);
+	REQUIRE(++it != end);
+	REQUIRE(*it == 11);
+	REQUIRE(++it == end);
 }

@@ -7,13 +7,25 @@
 #include "stringsearch/SuffixSort.hpp"
 
 namespace stringsearch {
-	ItemsArray::ItemsArray(const std::wstring_view text) {
+	ItemsLookup::ItemsLookup(const std::wstring_view text) {
 		items_.reserve(text.size());
-		
-		auto it = text.begin();
+
 		auto index = Index(0);
-		for(; it != text.end(); ++it) {
+		for(wchar_t it : text) {
 			items_.emplace_back(index);
+			if(it != 0)
+				continue;
+			
+			++index;
+		}
+
+		itemCount_ = index;
+	}
+
+	OldUniqueSearchLookup::OldUniqueSearchLookup(const std::wstring_view text) : ItemsLookup(text) {
+		itemEnds_.reserve(itemCount());
+		auto index = Index(0);
+		for(auto it = text.begin(); it != text.end(); ++it) {
 			if(*it != 0)
 				continue;
 
@@ -21,112 +33,57 @@ namespace stringsearch {
 			++index;
 		}
 	}
-
-	Index ItemsArray::getItem(const Index suffix) const {
-		return items_[suffix];
-	}
-
-	Index ItemsArray::getItemEnd(const Index item) const {
-		return itemEnds_[item];
-	}
-
-	SuffixArray::SuffixArray(const std::wstring_view text) : sa_(text.size()) {
-		std::iota(sa_.begin(), sa_.end(), Index(0));
-		SuffixSortInPlace(text.data(), sa_);
-	}
-
-	Span<const Index> SuffixArray::find(const std::wstring_view text, const std::wstring_view pattern) const {
-		const auto lower = lowerBound(sa_.begin(), sa_.end(), text, pattern);
-		const auto upper = upperBound(lower, sa_.end(), text, pattern);
-
-		const auto offset = std::distance(sa_.begin(), lower);
-		const auto count = std::distance(lower, upper);
-		return Span<const Index>(sa_).subspan(offset, count);
-	}
-
-	SuffixArray::IndexPtr SuffixArray::lowerBound(const IndexPtr begin, const IndexPtr end,
-																const std::wstring_view text, const std::wstring_view pattern) {
-		return std::lower_bound(begin, end, Index(0), [&](const Index &index, auto) {
-			const auto suffix = GetSuffix(text, index, pattern.size());
-			return std::lexicographical_compare(suffix.begin(), suffix.end(), pattern.begin(), pattern.end());
-		});
-	}
-
-	SuffixArray::IndexPtr SuffixArray::upperBound(const IndexPtr begin, const IndexPtr end,
-																const std::wstring_view text, const std::wstring_view pattern) {
-		return std::upper_bound(begin, end, Index(0), [&](auto, const Index &index) {
-			const auto suffix = GetSuffix(text, index, pattern.size());
-			return std::lexicographical_compare(pattern.begin(), pattern.end(), suffix.begin(), suffix.end());
-		});
-	}
-
-	Search::Search(const std::wstring_view text) : suffixArray_(text),
-																	items_(text),
-																	text_(text) {}
-
-	Span<const Index> Search::find(const std::wstring_view pattern) const {
-		return suffixArray_.find(text_, pattern);
-	}
-
-	Search::FindUniqueResult Search::findUnique(const std::wstring_view pattern, const Span<Index> outputIndices) const {
-		const auto range = find(pattern);
-		return findUnique(range.begin(), range.end(), outputIndices);
-	}
-
-	Search::FindUniqueResult Search::findUnique(const Span<const Index>::iterator begin,
-																const Span<const Index>::iterator end,
+	
+	FindUniqueResult OldUniqueSearchLookup::findUnique(const FindResult result,
 																const Span<Index> outputIndices) const {
 		std::vector<Index> buffer(outputIndices.size());
-		return findUnique(begin, end, outputIndices, buffer);
+		return findUnique(result, outputIndices, buffer);
 	}
 
-	Search::FindUniqueResult Search::findUnique(const Span<const Index>::iterator begin,
-																const Span<const Index>::iterator end, const Span<Index> outputIndices,
+	FindUniqueResult OldUniqueSearchLookup::findUnique(const FindResult result, const Span<Index> outputIndices,
 																const Span<Index> buffer) const {
 		auto rangeA = outputIndices;
 		auto rangeB = buffer;
 
-		auto indicesIt = begin;
+		auto indicesIt = result.begin();
 		
 		// always points into the current rangeA
 		auto goodItemsEnd = outputIndices.begin();
 		size_t iteration = 0;
 
 		while(true) {
-			const auto itemsThisIt = std::min(std::distance(goodItemsEnd, rangeA.end()), std::distance(indicesIt, end));
+			const auto itemsThisIt = std::min(std::distance(goodItemsEnd, rangeA.end()),
+														std::distance(indicesIt, result.end()));
 			const auto rangeAEnd = goodItemsEnd + itemsThisIt;
-			
+
 			std::copy(indicesIt, indicesIt + itemsThisIt, goodItemsEnd);
 			indicesIt += itemsThisIt;
 			std::sort(goodItemsEnd, rangeAEnd);
 
 			if(goodItemsEnd == rangeA.begin()) {
-				goodItemsEnd = items_.makeUniqueFull(goodItemsEnd, rangeAEnd);
+				goodItemsEnd = makeUniqueFull(goodItemsEnd, rangeAEnd);
 			} else {
-				goodItemsEnd = items_.makeUniqueMerge(rangeA.begin(), goodItemsEnd, rangeAEnd, rangeB);
+				goodItemsEnd = makeUniqueMerge(rangeA.begin(), goodItemsEnd, rangeAEnd, rangeB);
 				std::swap(rangeA, rangeB);
 			}
 
 			const auto remainingItems = std::distance(goodItemsEnd, rangeA.end());
 			++iteration;
-			if(remainingItems == 0 || indicesIt + remainingItems > end)
+			if(remainingItems == 0 || std::distance(indicesIt, result.end()) < remainingItems)
 				break;
 		}
 
 		if(rangeA.data() != outputIndices.data())
 			std::copy(rangeA.begin(), goodItemsEnd, outputIndices.begin());
 
-		return FindUniqueResult {
-			size_t(std::distance(rangeA.begin(), goodItemsEnd)),
-			size_t(std::distance(begin, indicesIt))
-		};
+		return FindUniqueResult(
+			std::distance(rangeA.begin(), goodItemsEnd),
+			std::distance(result.begin(), indicesIt)
+		);
 	}
 
-	std::wstring_view GetSuffix(const std::wstring_view text, const Index index, const size_t length) {
-		return text.substr(index, length);
-	}
-
-	Span<Index>::iterator ItemsArray::makeUniqueFull(const Span<Index>::iterator begin, const Span<Index>::iterator end) const {
+	Span<Index>::iterator OldUniqueSearchLookup::makeUniqueFull(const Span<Index>::iterator begin,
+																		const Span<Index>::iterator end) const {
 		Index lastWordEnd = 0;
 		auto writeIt = begin;
 		for(auto it = begin; it != end; ++it) {
@@ -143,7 +100,7 @@ namespace stringsearch {
 		return writeIt;
 	}
 
-	Span<Index>::iterator ItemsArray::makeUniqueMerge(const Span<const Index>::iterator begin,
+	Span<Index>::iterator OldUniqueSearchLookup::makeUniqueMerge(const Span<const Index>::iterator begin,
 																		const Span<const Index>::iterator secondHalfStart,
 																		const Span<const Index>::iterator end,
 																		const Span<Index> target) const {
@@ -176,4 +133,103 @@ namespace stringsearch {
 		return write;
 	}
 
+	SuffixArray::SuffixArray(const std::wstring_view text) : sa_(text.size()) {
+		std::iota(sa_.begin(), sa_.end(), Index(0));
+		SuffixSortInPlace(text.data(), sa_);
+	}
+
+	FindResult SuffixArray::find(const std::wstring_view text, const std::wstring_view pattern) const {
+		const auto lower = lowerBound(sa_.begin(), sa_.end(), text, pattern);
+		const auto upper = upperBound(lower, sa_.end(), text, pattern);
+
+		return FindResult(lower, upper);
+	}
+
+	IndexPtr SuffixArray::lowerBound(const IndexPtr begin, const IndexPtr end,
+												const std::wstring_view text, const std::wstring_view pattern) {
+		return std::lower_bound(begin, end, Index(0), [&](const Index &index, auto) {
+			const auto suffix = GetSuffix(text, index, pattern.size());
+			return std::lexicographical_compare(suffix.begin(), suffix.end(), pattern.begin(), pattern.end());
+		});
+	}
+
+	IndexPtr SuffixArray::upperBound(const IndexPtr begin, const IndexPtr end,
+												const std::wstring_view text, const std::wstring_view pattern) {
+		return std::upper_bound(begin, end, Index(0), [&](auto, const Index &index) {
+			const auto suffix = GetSuffix(text, index, pattern.size());
+			return std::lexicographical_compare(pattern.begin(), pattern.end(), suffix.begin(), suffix.end());
+		});
+	}
+
+	Index SuffixArray::indexOf(const IndexPtr it) const noexcept {
+		return Index(std::distance(sa_.begin(), it));
+	}
+
+	UniqueSearchLookup::UniqueSearchLookup(const std::wstring_view text, const SuffixArray &sa) : ItemsLookup(text), suffixArray_(sa) {
+		previousEntryOfSameItem_.reserve(sa.get().size());
+		std::vector<Index> lastIndexOfWord(itemCount(), Index(-1));
+		for(auto it = sa.begin(); it != sa.end(); ++it) {
+			const auto word = getItem(*it);
+			auto &value = lastIndexOfWord[word];
+			previousEntryOfSameItem_.emplace_back(value);
+			value = Index(std::distance(sa.begin(), it));
+		}
+	}
+
+	FindUniqueResult UniqueSearchLookup::findUnique(const FindResult result, const Span<Index> outputIndices) const {
+		auto write = outputIndices.begin();
+		auto it = uniqueItemsInRange(result);
+		for(; it != UniqueItemsIteratorEnd() && write != outputIndices.end(); ++it, ++write)
+			*write = *it;
+
+		return FindUniqueResult(
+			size_t(std::distance(outputIndices.begin(), write)),
+			it.offsetFromResultBegin()
+		);
+	}
+
+	UniqueItemsIterator UniqueSearchLookup::uniqueItemsInRange(const FindResult result) const noexcept {
+		return UniqueItemsIterator(result, *this);
+	}
+
+	Index UniqueSearchLookup::previousEntryOf(const Index saIndex) const noexcept {
+		return previousEntryOfSameItem_[saIndex];
+	}
+
+	bool UniqueSearchLookup::isDuplicateInRange(const IndexPtr begin, const Index prev) const noexcept {
+		return 0 <= prev && begin <= suffixArray_.begin() + prev;
+	}
+
+	bool UniqueSearchLookup::isDuplicateInRange(const IndexPtr begin, const IndexPtr ptr) const noexcept {
+		return isDuplicateInRange(begin, previousEntryOf(suffixArray_.indexOf(ptr)));
+	}
+
+	Search::Search(const std::wstring_view text)
+		: suffixArray_(text),
+			itemsLookup_(text, suffixArray()),
+			text_(text) {}
+
+	FindResult Search::find(const std::wstring_view pattern) const {
+		return suffixArray_.find(text_, pattern);
+	}
+
+	FindUniqueResult Search::findUnique(const FindResult result, const Span<Index> outputIndices) const {
+		return itemsLookup().findUnique(result, outputIndices);
+	}
+
+	void UniqueItemsIterator::next() noexcept {
+		while(++it_ != result_.end() && isDuplicate()) {}
+	}
+
+	bool UniqueItemsIterator::isDuplicate() const noexcept {
+		return itemsLookup_.isDuplicateInRange(result_.begin(), it_);
+	}
+
+	size_t UniqueItemsIterator::offsetFromResultBegin() const noexcept {
+		return std::distance(result_.begin(), it_);
+	}
+
+	std::wstring_view GetSuffix(const std::wstring_view text, const Index index, const size_t length) {
+		return text.substr(index, length);
+	}
 }
