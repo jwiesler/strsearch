@@ -35,8 +35,7 @@ file(GLOB_RECURSE HEADERS "include/stringsearch/*.hpp")
 set(BUILD_SHARED_LIBS ON)
 
 add_library(libstrsearch STATIC "src/stringsearch/Search.cpp" "src/stringsearch/SuffixSort.cpp")
-target_include_directories(libstrsearch PUBLIC "span/include")
-target_include_directories(libstrsearch PUBLIC "include")
+target_include_directories(libstrsearch PUBLIC "include" "span/include")
 target_include_directories(libstrsearch PRIVATE "src")
 include(CMakePrintHelpers)
 cmake_print_properties(DIRECTORIES .
@@ -50,7 +49,9 @@ generate_export_header(strsearchdll
     EXPORT_MACRO_NAME strsearchdll_EXPORT
     EXPORT_FILE_NAME dllexport.h
     STATIC_DEFINE strsearchdll_BUILT_AS_STATIC)
-set_target_properties(strsearchdll PROPERTIES OUTPUT_NAME "strsearch")
+set_target_properties(strsearchdll PROPERTIES 
+    PREFIX ""
+    OUTPUT_NAME "strsearch")
 target_link_libraries(strsearchdll libstrsearch)
 
 add_custom_command(TARGET libstrsearch PRE_BUILD
@@ -63,10 +64,12 @@ target_link_libraries(perfstrsearch libstrsearch benchmark::benchmark)
 
 link_directories(${CMAKE_BINARY_DIR})
 
-add_executable(stringsearchx WIN32 "src/stringsearch/Main.cpp")
-target_include_directories(stringsearchx PRIVATE "src")
-target_include_directories(stringsearchx PUBLIC "include")
+add_executable(stringsearchx "src/stringsearch/Main.cpp")
 target_include_directories(stringsearchx PRIVATE "src")
 target_link_libraries(stringsearchx libstrsearch)
+
+add_executable(teststringsearch "src/stringsearch/Test.cpp")
+target_include_directories(teststringsearch PRIVATE "Catch2/single_include")
+target_link_libraries(teststringsearch libstrsearch)
 
 ################################################################################
