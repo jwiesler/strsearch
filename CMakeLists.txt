@@ -55,6 +55,7 @@ if(STRSEARCH_ENABLE_BENCHMARK)
 	message("Building benchmarks.")
 
 	set(BENCHMARK_ENABLE_TESTING OFF)
+	add_subdirectory(benchmark)
 	add_executable(perfstrsearch "src/stringsearch/PerformanceTests.cpp")
 	target_link_libraries(perfstrsearch libstrsearch benchmark::benchmark)
 endif()
