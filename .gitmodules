@@ -1,9 +1,9 @@
 [submodule "benchmark"]
 	path = benchmark
 	url = git@github.com:google/benchmark.git
-[submodule "span"]
-	path = span
-	url = git@github.com:tcbrindle/span.git
 [submodule "Catch2"]
 	path = Catch2
 	url = git@github.com:catchorg/Catch2.git
+[submodule "span"]
+	path = span
+	url = https://github.com/tcbrindle/span
