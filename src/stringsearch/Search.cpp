@@ -133,9 +133,13 @@ namespace stringsearch {
 		return write;
 	}
 
+	void CreateArray(const std::wstring_view text, const Span<Index> sa) {
+		std::iota(sa.begin(), sa.end(), Index(0));
+		SuffixSortInPlace(text, sa);
+	}
+
 	SuffixArray::SuffixArray(const std::wstring_view text) : sa_(text.size()) {
-		std::iota(sa_.begin(), sa_.end(), Index(0));
-		SuffixSortInPlace(text.data(), sa_);
+		CreateArray(text, sa_);
 	}
 
 	FindResult SuffixArray::find(const std::wstring_view text, const std::wstring_view pattern) const {

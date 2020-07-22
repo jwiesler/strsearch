@@ -4,12 +4,19 @@
 
 #include <catch2/catch.hpp>
 #include <numeric>
+#include "stringsearch/SuffixSort.hpp"
 
 using namespace std::literals;
 constexpr wchar_t TestCharArray[] = { L'A', L'\0', L'B', L'B', L'\0', L'C', L'C', L'C', L'\0', L'D', L'D', L'\0', L'E', L'\0'};
-constexpr auto TestString = std::wstring_view(TestCharArray, std::size(TestCharArray));
+constexpr auto TestCharCount = std::size(TestCharArray);
+constexpr auto TestString = std::wstring_view(TestCharArray, TestCharCount);
 
 using namespace stringsearch;
+
+//       0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10| 11| 12| 13
+// SA = 13 | 1 | 4 | 8 | 11| 0 | 3 | 2 | 7 | 6 | 5 | 10| 9 | 12
+constexpr std::array<Index, TestCharCount> TestSuffixArray = { 13, 1, 4, 8, 11, 0, 3, 2, 7, 6, 5, 10, 9, 12 };
+
 TEST_CASE("ItemsLookup getters work", "[ItemsLookup]") {
 	const ItemsLookup array(TestString);
 
@@ -87,6 +94,75 @@ TEST_CASE("makeUnique", "[OldUniqueSearchLookup]") {
 	}
 }
 
+template<typename IteratorABegin, typename IteratorAEnd, typename IteratorBBegin, typename IteratorBEnd>
+void CollectionsEqual(IteratorABegin &&abegin, IteratorAEnd &&aend, IteratorBBegin &&bbegin, IteratorBEnd &&bend) {
+	size_t offset = 0;
+	for(; abegin != aend; ++abegin, ++bbegin, ++offset) {
+		INFO("At offset " << offset);
+		CHECK(bbegin != bend);
+		CHECK(*abegin == *bbegin);
+	}
+	CHECK(bbegin == bend);
+}
+
+TEST_CASE("utf16 is iterated correctly", "[Utf16TextIterator]") {
+	constexpr auto str = L"T\u0950";
+	
+	SECTION("small sample from the start") {
+		Utf16TextIterator it(str);
+		Utf16TextIterator end(str + 2);
+		std::array<char, 4> result {{ 0, 'T', 0x9, 0x50 }};
+		CollectionsEqual(result.begin(), result.end(), it, end);
+	}
+
+	SECTION("small sample from offset position") {
+		Utf16TextIterator it(reinterpret_cast<const char *>(str));
+		Utf16TextIterator end(str + 2);
+		std::array<char, 3> result {{ 'T', 0x9, 0x50 }};
+		CollectionsEqual(result.begin(), result.end(), it, end);
+	}
+}
+
+TEST_CASE("sort works", "[SuffixSort]") {
+	std::array<Index, TestCharCount> indices{};
+	std::iota(indices.begin(), indices.end(), Index(0));
+
+	SECTION("SuffixSortOwnBuffer") {
+		SuffixSortOwnBuffer(TestString.data(), indices);
+		CollectionsEqual(indices.begin(), indices.end(), TestSuffixArray.begin(), TestSuffixArray.end());
+	}
+
+	SECTION("SuffixSortSharedBuffer") {
+		SuffixSortSharedBuffer(TestString.data(), indices);
+		CollectionsEqual(indices.begin(), indices.end(), TestSuffixArray.begin(), TestSuffixArray.end());
+	}
+
+	SECTION("SuffixSortInPlace") {
+		SuffixSortInPlace(TestString.data(), indices);
+		CollectionsEqual(indices.begin(), indices.end(), TestSuffixArray.begin(), TestSuffixArray.end());
+	}
+	
+	SECTION("SuffixSortStd") {
+		SuffixSortStd(TestString.data(), indices);
+		CollectionsEqual(indices.begin(), indices.end(), TestSuffixArray.begin(), TestSuffixArray.end());
+	}
+
+	SECTION("SuffixSortOwnBufferMax") {
+		SuffixSortOwnBufferMax(TestString.data(), indices, 2);
+		CollectionsEqual(indices.begin(), indices.end(), TestSuffixArray.begin(), TestSuffixArray.end());
+	}
+
+	SECTION("SuffixSortSharedBufferMax") {
+		SuffixSortSharedBufferMax(TestString.data(), indices, 2);
+		CollectionsEqual(indices.begin(), indices.end(), TestSuffixArray.begin(), TestSuffixArray.end());
+	}
+
+	SECTION("SuffixSortInPlaceMax") {
+		SuffixSortInPlaceMax(TestString.data(), indices, 2);
+		CollectionsEqual(indices.begin(), indices.end(), TestSuffixArray.begin(), TestSuffixArray.end());
+	}
+}
+
 TEST_CASE("bound", "[SuffixArray]") {
 	//       0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10| 11| 12| 13
 	// SA = 13 | 1 | 4 | 8 | 11| 0 | 3 | 2 | 7 | 6 | 5 | 10| 9 | 12
@@ -134,6 +210,7 @@ TEST_CASE("OldUniqueSearchLookup findUnique", "[OldUniqueSearchLookup]") {
 		
 		std::array<Index, 10> output{};
 		const auto findResult = array.find(TestString, pattern);
+		INFO("Found " << findResult.size() << " items");
 		const auto res = oldSearch.findUnique(findResult, output);
 		REQUIRE(res.Consumed == consumed);
 		REQUIRE(res.Count == foundCount);
@@ -151,6 +228,7 @@ TEST_CASE("OldUniqueSearchLookup findUnique", "[OldUniqueSearchLookup]") {
 		
 		std::array<Index, 1> output{};
 		const auto findResult = array.find(TestString, pattern);
+		INFO("Found " << findResult.size() << " items");
 		const auto res = oldSearch.findUnique(findResult, output);
 		REQUIRE(res.Consumed == partialConsumed);
 		REQUIRE(res.Count == partialFound);
@@ -161,6 +239,7 @@ TEST_CASE("OldUniqueSearchLookup findUnique", "[OldUniqueSearchLookup]") {
 		
 		std::array<Index, 2> output{};
 		const auto findResult = array.find(TestString, pattern);
+		INFO("Found " << findResult.size() << " items");
 		const auto res = oldSearch.findUnique(findResult, output);
 		REQUIRE(res.Consumed == partialConsumed);
 		REQUIRE(res.Count == partialFound);
@@ -182,6 +261,7 @@ TEST_CASE("UniqueSearchLookup findUnique", "[UniqueSearchLookup]") {
 		
 		std::array<Index, 10> output{};
 		const auto result = array.find(TestString, pattern);
+		INFO("Found " << result.size() << " items");
 		const auto res = search.findUnique(result, output);
 		REQUIRE(res.Consumed == consumed);
 		REQUIRE(res.Count == foundCount);
@@ -199,6 +279,7 @@ TEST_CASE("UniqueSearchLookup findUnique", "[UniqueSearchLookup]") {
 		
 		std::array<Index, 1> output{};
 		const auto result = array.find(TestString, pattern);
+		INFO("Found " << result.size() << " items");
 		const auto res = search.findUnique(result, output);
 		REQUIRE(res.Consumed == partialConsumed);
 		REQUIRE(res.Count == partialFound);
@@ -209,6 +290,7 @@ TEST_CASE("UniqueSearchLookup findUnique", "[UniqueSearchLookup]") {
 		
 		std::array<Index, 2> output{};
 		const auto result = array.find(TestString, pattern);
+		INFO("Found " << result.size() << " items");
 		const auto res = search.findUnique(result, output);
 		REQUIRE(res.Consumed == partialConsumed);
 		REQUIRE(res.Count == partialFound);
@@ -218,18 +300,19 @@ TEST_CASE("UniqueSearchLookup findUnique", "[UniqueSearchLookup]") {
 TEST_CASE("iterate", "[UniqueItemsIterator]") {
 	const SuffixArray array(TestString);
 	const UniqueSearchLookup lookup(TestString, array);
+	const UniqueItemsIteratorEnd end;
 
-	UniqueItemsIterator it(FindResult(array.begin(), array.end()), lookup);
-	UniqueItemsIteratorEnd end;
-	REQUIRE(it != end);
-	REQUIRE(*it == 13);
-	REQUIRE(++it != end);
-	REQUIRE(*it == 1);
-	REQUIRE(++it != end);
-	REQUIRE(*it == 4);
-	REQUIRE(++it != end);
-	REQUIRE(*it == 8);
-	REQUIRE(++it != end);
-	REQUIRE(*it == 11);
-	REQUIRE(++it == end);
+	const auto [beginOffset, initialOffset, endOffset, indices] = GENERATE(values({
+		std::make_tuple(0, 0, TestCharCount, std::vector<Index>{{ 13, 1, 4, 8, 11 }}),
+		std::make_tuple(5, 5, TestCharCount - 3, std::vector<Index>{{ 0, 3, 7 }}), // (0), (3, 2), (7, 6, 5)
+		std::make_tuple(5, 7, TestCharCount - 3, std::vector<Index>{{ 7 }}), // (0), (3, >2), (7, 6, 5)
+	}));
+	
+	UniqueItemsIterator it(FindResult(array.begin() + beginOffset, array.begin() + endOffset), array.begin() + initialOffset, lookup);
+	for(auto iit = indices.begin(); iit != indices.end(); ++iit, ++it) {
+		INFO("Iterator is at offset " << beginOffset + it.offsetFromResultBegin());
+		REQUIRE(!it.isDuplicate());
+		REQUIRE(it != end);
+		REQUIRE(*it == *iit);
+	}
 }

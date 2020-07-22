@@ -30,7 +30,7 @@ static void TestWithCharacters(benchmark::State &state, const std::wstring &char
 	std::iota(sa.begin(), sa.end(), 0);
 
 	for(auto _ : state) {
-		function(std::as_const(characters).data(), sa);
+		function(std::as_const(characters), sa);
 		state.PauseTiming();
 		benchmark::ClobberMemory();
 		state.ResumeTiming();

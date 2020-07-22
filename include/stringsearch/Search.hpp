@@ -30,6 +30,8 @@ namespace stringsearch {
 		[[nodiscard]] size_t size() const noexcept { return std::distance(begin_, end_); }
 	};
 
+	void CreateArray(std::wstring_view text, Span<Index> sa);
+	
 	class SuffixArray {
 		std::vector<Index> sa_;
 
