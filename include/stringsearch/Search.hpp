@@ -116,9 +116,9 @@ namespace stringsearch {
 			return previousEntryOfSameItem_;
 		}
 
-		[[nodiscard]] FindUniqueResult findUnique(FindResult result, Span<Index> outputIndices) const;
+		[[nodiscard]] FindUniqueResult findUnique(FindResult result, Span<Index> outputIndices, unsigned int offset = 0) const;
 
-		[[nodiscard]] UniqueItemsIterator uniqueItemsInRange(FindResult result) const noexcept;
+		[[nodiscard]] UniqueItemsIterator uniqueItemsInRange(FindResult result, unsigned int offset) const noexcept;
 	};
 
 	[[nodiscard]] std::wstring_view GetSuffix(std::wstring_view text, Index index, size_t length);
@@ -133,7 +133,7 @@ namespace stringsearch {
 
 		[[nodiscard]] FindResult find(std::wstring_view pattern) const;
 
-		[[nodiscard]] FindUniqueResult findUnique(FindResult result, Span<Index> outputIndices) const;
+		[[nodiscard]] FindUniqueResult findUnique(FindResult result, Span<Index> outputIndices, unsigned int offset) const;
 
 		[[nodiscard]] const SuffixArray& suffixArray() const noexcept { return suffixArray_; }
 

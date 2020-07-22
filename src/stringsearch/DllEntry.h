@@ -1,10 +1,32 @@
 #pragma once
 #include "dllexport.h"
+#include "stringsearch/Definitions.hpp"
+
+enum class Result {
+	Ok = 0,
+	InvalidInstance = 1,
+	NullPointer = 2,
+	OffsetOutOfBounds
+};
+
+struct FindUniqueItemsResult {
+	size_t TotalResults;
+	size_t Count;
+	size_t Consumed;
+};
 
 extern "C" {
-	strsearchdll_EXPORT void SuffixSortSharedBuffer(const wchar_t *characters, int *saBegin, int *saEnd);
+	using InstanceHandle = void *;
+	
+	strsearchdll_EXPORT void SuffixSortSharedBuffer(const wchar_t *characters, stringsearch::Index *saBegin, stringsearch::Index *saEnd);
 
-	strsearchdll_EXPORT void SuffixSortInPlace(const wchar_t *characters, int *saBegin, int *saEnd);
+	strsearchdll_EXPORT void SuffixSortInPlace(const wchar_t *characters, stringsearch::Index *saBegin, stringsearch::Index *saEnd);
 
-	strsearchdll_EXPORT int Find(const wchar_t *charactersBegin, const wchar_t *charactersEnd, const wchar_t *patternBegin, const wchar_t *patternEnd, const int *saBegin, const int *saEnd);
+	strsearchdll_EXPORT void *CreateSearchInstanceFromText(const wchar_t *charactersBegin, size_t count);
+	
+	strsearchdll_EXPORT void DestroySearchInstance(InstanceHandle instance);
+
+	strsearchdll_EXPORT Result CountOccurences(InstanceHandle instance, const wchar_t *patternBegin, size_t count, int *occurrences);
+	
+	strsearchdll_EXPORT Result FindUniqueItems(InstanceHandle instance, const wchar_t *patternBegin, size_t count, stringsearch::Index *output, size_t outputCount, FindUniqueItemsResult *result, unsigned int offset);
 }

@@ -176,9 +176,9 @@ namespace stringsearch {
 		}
 	}
 
-	FindUniqueResult UniqueSearchLookup::findUnique(const FindResult result, const Span<Index> outputIndices) const {
+	FindUniqueResult UniqueSearchLookup::findUnique(const FindResult result, const Span<Index> outputIndices, unsigned int offset) const {
 		auto write = outputIndices.begin();
-		auto it = uniqueItemsInRange(result);
+		auto it = uniqueItemsInRange(result, offset);
 		for(; it != UniqueItemsIteratorEnd() && write != outputIndices.end(); ++it, ++write)
 			*write = *it;
 
@@ -188,8 +188,8 @@ namespace stringsearch {
 		);
 	}
 
-	UniqueItemsIterator UniqueSearchLookup::uniqueItemsInRange(const FindResult result) const noexcept {
-		return UniqueItemsIterator(result, *this);
+	UniqueItemsIterator UniqueSearchLookup::uniqueItemsInRange(const FindResult result, const unsigned int offset) const noexcept {
+		return UniqueItemsIterator(result, result.begin() + offset, *this);
 	}
 
 	Index UniqueSearchLookup::previousEntryOf(const Index saIndex) const noexcept {
@@ -213,8 +213,8 @@ namespace stringsearch {
 		return suffixArray_.find(text_, pattern);
 	}
 
-	FindUniqueResult Search::findUnique(const FindResult result, const Span<Index> outputIndices) const {
-		return itemsLookup().findUnique(result, outputIndices);
+	FindUniqueResult Search::findUnique(const FindResult result, const Span<Index> outputIndices, unsigned int offset) const {
+		return itemsLookup().findUnique(result, outputIndices, offset);
 	}
 
 	void UniqueItemsIterator::next() noexcept {
