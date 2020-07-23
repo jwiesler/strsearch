@@ -1,17 +1,18 @@
 #include "stringsearch/Search.hpp"
 
+#include "stringsearch/SuffixSort.hpp"
+#include "stringsearch/Utf16Le.hpp"
+
 #include <algorithm>
 #include <numeric>
 #include <vector>
-
-#include "stringsearch/SuffixSort.hpp"
 
 namespace stringsearch {
 	ItemsLookup::ItemsLookup(const std::u16string_view text) {
 		items_.reserve(text.size());
 
 		auto index = Index(0);
-		for(wchar_t it : text) {
+		for(auto it : text) {
 			items_.emplace_back(index);
 			if(it != 0)
 				continue;
@@ -155,7 +156,7 @@ namespace stringsearch {
 												const std::u16string_view text, const std::u16string_view pattern) {
 		return std::lower_bound(begin, end, Index(0), [&](const Index &index, auto) {
 			const auto suffix = GetSuffix(text, index, pattern.size());
-			return std::lexicographical_compare(suffix.begin(), suffix.end(), pattern.begin(), pattern.end());
+			return LessThan(suffix, pattern);
 		});
 	}
 
@@ -163,7 +164,7 @@ namespace stringsearch {
 												const std::u16string_view text, const std::u16string_view pattern) {
 		return std::upper_bound(begin, end, Index(0), [&](auto, const Index &index) {
 			const auto suffix = GetSuffix(text, index, pattern.size());
-			return std::lexicographical_compare(pattern.begin(), pattern.end(), suffix.begin(), suffix.end());
+			return LessThan(pattern, suffix);
 		});
 	}
 

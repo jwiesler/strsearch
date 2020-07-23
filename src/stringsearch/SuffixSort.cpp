@@ -3,33 +3,44 @@
 #include <numeric>
 #include <array>
 #include <vector>
+#include "stringsearch/Utf16Le.hpp"
+#include <cassert>
 
 namespace stringsearch {
-	using TextIterator = Utf16TextIterator;
+	using TextIterator = Utf16LETextIterator;
 
-	const char * AdvanceDouble(const char * const ptr, const ptrdiff_t distance) {
-		return ptr + distance * 2;
+	template<typename T>
+	void RangeCheck(T *begin, T *end) {
+		assert(begin <= end);
+	}
+
+	void RangeCheck(const Utf16LETextIterator begin, const Utf16LETextIterator end) {
+		RangeCheck(begin.get(), end.get());
 	}
 
 	TextIterator AdvanceDouble(TextIterator it, const ptrdiff_t distance) {
 		return it.advanceDouble(distance);
 	}
 	
-	size_t ToBucketIndex(const TextIterator text, const Index suffix) {
-		return static_cast<size_t>(*AdvanceDouble(text, suffix));
+	size_t ToBucketIndex(const TextIterator text, const TextIterator end, const Index suffix) {
+		const auto it = AdvanceDouble(text, suffix);
+		RangeCheck(it, end);
+		const auto res = static_cast<size_t>(*it);
+		assert(res < 0x100);
+		return res;
 	}
 
-	void Count(const TextIterator text, const Span<const Index> sa, const Span<Index> buckets) {
+	void Count(const TextIterator text, const TextIterator end, const Span<const Index> sa, const Span<Index> buckets) {
 		for(const auto suffix : sa) {
-			const auto bucket = ToBucketIndex(text, suffix);
+			const auto bucket = ToBucketIndex(text, end, suffix);
 			buckets[bucket]++;
 		}
 	}
 
-	void MoveElements(const TextIterator text, const Span<Index> bucketStarts, const Span<Index> buffer,
+	void MoveElements(const TextIterator text, const TextIterator end, const Span<Index> bucketStarts, const Span<Index> buffer,
 							const Span<Index> sa) {
 		for(const auto suffix : sa) {
-			const auto bucket = ToBucketIndex(text, suffix);
+			const auto bucket = ToBucketIndex(text, end, suffix);
 			const auto off = bucketStarts[bucket]++;
 			buffer[off] = suffix;
 		}
@@ -37,10 +48,10 @@ namespace stringsearch {
 		std::copy(buffer.begin(), buffer.end(), sa.begin());
 	}
 
-	void MoveElementsInPlace(const TextIterator text, const Span<Index> bucketStarts, const Span<Index> sa) {
+	void MoveElementsInPlace(const TextIterator text, const TextIterator end, const Span<Index> bucketStarts, const Span<Index> sa) {
 		for(auto it = sa.begin(); it != sa.end();) {
 			const auto suffix = *it;
-			const auto bucket = ToBucketIndex(text, suffix);
+			const auto bucket = ToBucketIndex(text, end, suffix);
 			const auto off = bucketStarts[bucket];
 
 			// Swap only with elements in front of the current element
@@ -59,18 +70,19 @@ namespace stringsearch {
 		}
 	}
 
-	void SuffixSortStd(const TextIterator text, const TextIterator end, const Span<Index> sa) {
+	void SuffixSortStd(const char16_t *text, const char16_t *end, const Span<Index> sa) {
 		std::sort(sa.begin(), sa.end(), [&](const Index a, const Index b) {
 			return std::lexicographical_compare(
-				AdvanceDouble(text, a), end, 
-				AdvanceDouble(text, b), end
+				text + a, end, 
+				text + b, end,
+				LessThanUtf16Le
 			);
 		});
 	}
 
 	template<typename F>
 	void DispatchBuckets(const TextIterator text, const std::array<Index, 0x100> &buckets, const Span<Index> sa, F &&f) {
-		auto last = 0;//isOddAddress ? 0 : buckets[0];
+		auto last = 0;
 
 		for(auto v : buckets) {
 			if(v == last)
@@ -85,31 +97,32 @@ namespace stringsearch {
 	struct SharedBuffer {
 		const Span<Index> Buffer;
 
-		void moveElements(const TextIterator text, const Span<Index> bucketStarts, const Span<Index> sa) const {
-			MoveElements(text, bucketStarts, Buffer.subspan(0, sa.size()), sa);
+		void moveElements(const TextIterator text, const TextIterator end, const Span<Index> bucketStarts, const Span<Index> sa) const {
+			MoveElements(text, end, bucketStarts, Buffer.subspan(0, sa.size()), sa);
 		}
 	};
 
 	struct OwnBuffer {
-		void moveElements(const TextIterator text, const Span<Index> bucketStarts, const Span<Index> sa) const {
+		void moveElements(const TextIterator text, const TextIterator end, const Span<Index> bucketStarts, const Span<Index> sa) const {
 			std::vector<Index> buffer(sa.size());
-			MoveElements(text, bucketStarts, buffer, sa);
+			MoveElements(text, end, bucketStarts, buffer, sa);
 		}
 	};
 
 	struct InPlace {
-		void moveElements(const TextIterator text, const Span<Index> bucketStarts, const Span<Index> sa) const {
-			MoveElementsInPlace(text, bucketStarts, sa);
+		void moveElements(const TextIterator text, const TextIterator end, const Span<Index> bucketStarts, const Span<Index> sa) const {
+			MoveElementsInPlace(text, end, bucketStarts, sa);
 		}
 	};
 
 	template<typename Derived>
 	void SuffixSort(const TextIterator text, const TextIterator textEnd, const Span<Index> sa, Derived derived) {
+		RangeCheck(text, textEnd);
 		std::array<Index, 0x100> buckets{};
 
-		Count(text, sa, buckets);
+		Count(text, textEnd, sa, buckets);
 
-		const auto allInOne = size_t(buckets[ToBucketIndex(text, sa[0])]) == sa.size();
+		const auto allInOne = size_t(buckets[ToBucketIndex(text, textEnd, sa[0])]) == sa.size();
 		const auto nextText = text++;
 
 		if(allInOne) {
@@ -118,7 +131,7 @@ namespace stringsearch {
 		}
 
 		std::exclusive_scan(buckets.begin(), buckets.end(), buckets.begin(), Index(0));
-		derived.moveElements(text, buckets, sa);
+		derived.moveElements(text, textEnd, buckets, sa);
 
 		DispatchBuckets(nextText, buckets, sa, [&](const auto newText, const auto range) {
 			SuffixSort(newText, textEnd, range, derived);
@@ -126,17 +139,9 @@ namespace stringsearch {
 	}
 
 	TextIterator ToTextIterator(const char16_t *characters) {
-		return Utf16TextIterator(characters);
+		return Utf16LETextIterator(characters);
 	}
 
-	const char16_t *BeginPtr(const std::u16string_view view) {
-		return view.data();
-	}
-
-	const char16_t *EndPtr(const std::u16string_view view) {
-		return view.data();
-	}
-	
 	template<typename Derived>
 	void SuffixSort(const std::u16string_view characters, const Span<Index> sa, Derived derived) {
 		SuffixSort(ToTextIterator(BeginPtr(characters)), ToTextIterator(EndPtr(characters)), sa, derived);
@@ -144,16 +149,18 @@ namespace stringsearch {
 	
 	template<typename Derived>
 	void SuffixSortMax(const TextIterator text, const TextIterator textEnd, const Span<Index> sa, const size_t max, Derived derived) {
-		if(sa.size() < max) {
-			SuffixSortStd(text, textEnd, sa);
+		RangeCheck(text, textEnd);
+		if(sa.size() < max && text.isOddAddress()) {
+			// We assume textEnd is always at an odd address by construction...
+			SuffixSortStd(reinterpret_cast<const char16_t *>(text.get() - 1), reinterpret_cast<const char16_t *>(textEnd.get() - 1), sa);
 			return;
 		}
 		
 		std::array<Index, 0x100> buckets{};
 
-		Count(text, sa, buckets);
+		Count(text, textEnd, sa, buckets);
 
-		const auto allInOne = size_t(buckets[ToBucketIndex(text, sa[0])]) == sa.size();
+		const auto allInOne = size_t(buckets[ToBucketIndex(text, textEnd, sa[0])]) == sa.size();
 
 		const auto nextText = text++;
 
@@ -163,7 +170,7 @@ namespace stringsearch {
 		}
 
 		std::exclusive_scan(buckets.begin(), buckets.end(), buckets.begin(), Index(0));
-		derived.moveElements(text, buckets, sa);
+		derived.moveElements(text, textEnd, buckets, sa);
 
 		DispatchBuckets(nextText, buckets, sa, [&](const auto newText, const auto range) {
 			SuffixSortMax<Derived>(newText, textEnd, range, max, derived);
@@ -176,7 +183,7 @@ namespace stringsearch {
 	}
 	
 	void SuffixSortStd(const std::u16string_view characters, const Span<Index> sa) {
-		SuffixSortStd(ToTextIterator(BeginPtr(characters)), ToTextIterator(EndPtr(characters)), sa);
+		SuffixSortStd(BeginPtr(characters), EndPtr(characters), sa);
 	}
 	
 	void SuffixSortSharedBuffer(const std::u16string_view characters, const Span<Index> sa) {

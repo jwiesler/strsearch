@@ -21,10 +21,26 @@ void SuffixSortInPlace(const char16_t *characters, int *saBegin, int *saEnd) {
 	SuffixSortInPlaceMax(characters, MakeSpan(saBegin, saEnd));
 }
 
+using ClockDuration = std::chrono::high_resolution_clock::duration;
+
+template<typename F>
+decltype(auto) Time(ClockDuration &duration, F && f) {
+	const auto before = std::chrono::high_resolution_clock::now();
+	decltype(auto) res = f();
+	const auto after = std::chrono::high_resolution_clock::now();
+	duration = after - before;
+	return res;
+}
+
 InstanceHandle CreateSearchInstanceFromText(const char16_t *charactersBegin, const size_t count) {
 	std::cout << "Creating instance\n";
 	const auto text = std::u16string_view(charactersBegin, count);
-	return new Search(text);
+	ClockDuration createTime;
+	const auto ptr = Time(createTime, [&]() {
+		return new Search(text);
+	});
+	std::cout << "Create took " << createTime.count() << "ns\n";
+	return ptr;
 }
 
 void DestroySearchInstance(const InstanceHandle instance) {
@@ -54,25 +70,29 @@ Result FindUniqueItems(const InstanceHandle instance, const char16_t *patternBeg
 	
 	const auto &sa = Get(instance);
 	const auto pattern = std::u16string_view(patternBegin, count);
+
+	ClockDuration searchTime;
+	const auto searchResult = Time(searchTime, [&]() {
+		return sa.find(pattern);
+	});
 	
-	const auto beforeSearch = std::chrono::high_resolution_clock::now();
-	const auto searchResult = sa.find(pattern);
-	const auto afterSearch = std::chrono::high_resolution_clock::now();
-	
-	std::cout << "Search took " << (afterSearch - beforeSearch).count() << "ns\n";
+	std::cout << "Search took " << searchTime.count() << "ns\n";
 	std::wstring_convert<std::codecvt_utf8<char16_t>, char16_t> cv;
 	std::cout << "Found " << searchResult.size() << " occurrences for " << std::quoted(cv.to_bytes(pattern.data(), pattern.data() + pattern.size())) << ", skipping " << offset << '\n';
 	if(searchResult.size() < size_t(offset))
 		return Result::OffsetOutOfBounds;
 	
-	const auto beforeUnique = std::chrono::high_resolution_clock::now();
-	const auto res = sa.findUnique(searchResult, Span<Index>(output, outputCount), offset);
-	for(auto &index : Span<Index>(output, res.Count))
-		index = sa.itemsLookup().getItem(index);
-	const auto afterUnique = std::chrono::high_resolution_clock::now();
-	std::cout << "Unique took " << (afterUnique - beforeUnique).count() << "ns\n";
+	ClockDuration uniqueTime;
+	const auto uniqueResult = Time(uniqueTime, [&]() {
+		const auto res = sa.findUnique(searchResult, Span<Index>(output, outputCount), offset);
+		for(auto &index : Span<Index>(output, res.Count))
+			index = sa.itemsLookup().getItem(index);
+		return res;
+	});
+	
+	std::cout << "Unique took " << uniqueTime.count() << "ns\n";
 	
 	if(result)
-		*result = FindUniqueItemsResult{searchResult.size(), res.Count, res.Consumed};
+		*result = FindUniqueItemsResult{searchResult.size(), uniqueResult.Count, uniqueResult.Consumed};
 	return Result::Ok;
 }

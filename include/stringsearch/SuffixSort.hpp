@@ -2,56 +2,15 @@
 #include "Definitions.hpp"
 
 namespace stringsearch {
-	class Utf16TextIterator {
-		const char * ptr_;
+	template<typename T>
+	const T *BeginPtr(const std::basic_string_view<T> view) {
+		return view.data();
+	}
 
-	public:
-		using value_type = const std::byte;
-		using pointer = const std::byte *;
-		using reference = const std::byte &;
-		using difference_type = ptrdiff_t;
-		using iterator_category = std::forward_iterator_tag;
-		
-		explicit Utf16TextIterator(const char *ptr)
-			: ptr_(ptr) {}
-
-		explicit Utf16TextIterator(const char16_t *ptr)
-			: ptr_(reinterpret_cast<const char *>(ptr) + 1) {}
-
-		Utf16TextIterator &operator++() noexcept {
-			const auto isOddAddress = (reinterpret_cast<uintptr_t>(ptr_) & 1) == 1;
-			const auto nextText = isOddAddress ? ptr_ - 1 : ptr_ + 3;
-			ptr_ = nextText;
-			return *this;
-		}
-
-		[[nodiscard]] const char &operator*() const noexcept {
-			return *ptr_;
-		}
-
-		[[nodiscard]] const char *get() const noexcept {
-			return ptr_;
-		}
-
-		bool operator!=(const Utf16TextIterator &o) const noexcept {
-			return !(*this == o);
-		}
-
-		bool operator==(const Utf16TextIterator &o) const noexcept {
-			return ptr_ == o.ptr_;
-		}
-
-		Utf16TextIterator &advanceDouble(const ptrdiff_t difference) noexcept {
-			ptr_ += 2 * difference;
-			return *this;
-		}
-
-		Utf16TextIterator operator++(int) const noexcept {
-			auto it = *this;
-			++it;
-			return it;
-		}
-	};
+	template<typename T>
+	const T *EndPtr(const std::basic_string_view<T> view) {
+		return view.data() + view.size();
+	}
 	
 	void SuffixSortStd(std::u16string_view characters, Span<Index> sa);
 	
