@@ -105,6 +105,17 @@ void CollectionsEqual(IteratorABegin &&abegin, IteratorAEnd &&aend, IteratorBBeg
 	CHECK(bbegin == bend);
 }
 
+template<typename IteratorABegin, typename IteratorAEnd>
+void CollectionsEqual(IteratorABegin &&abegin, IteratorAEnd &&aend, Utf16TextIterator bbegin, Utf16TextIterator bend, const char *start) {
+	size_t offset = 0;
+	for(; abegin != aend; ++abegin, ++bbegin, ++offset) {
+		INFO("At offset " << offset << ", Utf16TextIterator is at offset " << std::distance(start, bbegin.get()));
+		CHECK(bbegin != bend);
+		CHECK(*abegin == *bbegin);
+	}
+	CHECK(bbegin == bend);
+}
+
 TEST_CASE("utf16 is iterated correctly", "[Utf16TextIterator]") {
 	constexpr auto str = L"T\u0950";
 	
@@ -112,14 +123,14 @@ TEST_CASE("utf16 is iterated correctly", "[Utf16TextIterator]") {
 		Utf16TextIterator it(str);
 		Utf16TextIterator end(str + 2);
 		std::array<char, 4> result {{ 0, 'T', 0x9, 0x50 }};
-		CollectionsEqual(result.begin(), result.end(), it, end);
+		CollectionsEqual(result.begin(), result.end(), it, end, reinterpret_cast<const char *>(str));
 	}
 
 	SECTION("small sample from offset position") {
 		Utf16TextIterator it(reinterpret_cast<const char *>(str));
 		Utf16TextIterator end(str + 2);
 		std::array<char, 3> result {{ 'T', 0x9, 0x50 }};
-		CollectionsEqual(result.begin(), result.end(), it, end);
+		CollectionsEqual(result.begin(), result.end(), it, end, reinterpret_cast<const char *>(str));
 	}
 }
 
