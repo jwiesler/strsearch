@@ -118,19 +118,28 @@ void CollectionsEqual(IteratorABegin &&abegin, IteratorAEnd &&aend, Utf16TextIte
 
 TEST_CASE("utf16 is iterated correctly", "[Utf16TextIterator]") {
 	constexpr auto str = L"T\u0950";
+
+	REQUIRE(str[0] == 0x0054);
+	REQUIRE(str[1] == 0x0950);
+
+	const auto *cstr = reinterpret_cast<const char *>(str);
+	REQUIRE(cstr[0] == 0x54);
+	REQUIRE(cstr[1] == 0x00);
+	REQUIRE(cstr[2] == 0x50);
+	REQUIRE(cstr[3] == 0x09);
 	
 	SECTION("small sample from the start") {
 		Utf16TextIterator it(str);
 		Utf16TextIterator end(str + 2);
 		std::array<char, 4> result {{ 0, 'T', 0x9, 0x50 }};
-		CollectionsEqual(result.begin(), result.end(), it, end, reinterpret_cast<const char *>(str));
+		CollectionsEqual(result.begin(), result.end(), it, end, cstr);
 	}
 
 	SECTION("small sample from offset position") {
 		Utf16TextIterator it(reinterpret_cast<const char *>(str));
 		Utf16TextIterator end(str + 2);
 		std::array<char, 3> result {{ 'T', 0x9, 0x50 }};
-		CollectionsEqual(result.begin(), result.end(), it, end, reinterpret_cast<const char *>(str));
+		CollectionsEqual(result.begin(), result.end(), it, end, cstr);
 	}
 }
 
