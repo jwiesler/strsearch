@@ -138,6 +138,8 @@ namespace stringsearch {
 		SuffixSortInPlace(text, sa);
 	}
 
+	SuffixArray::SuffixArray(const Span<const Index> array) : sa_(array.begin(), array.end()) {}
+
 	SuffixArray::SuffixArray(const std::wstring_view text) : sa_(text.size()) {
 		CreateArray(text, sa_);
 	}

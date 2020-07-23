@@ -36,6 +36,7 @@ namespace stringsearch {
 		std::vector<Index> sa_;
 
 	public:
+		explicit SuffixArray(Span<const Index> array);
 		explicit SuffixArray(std::wstring_view text);
 
 		[[nodiscard]] FindResult find(std::wstring_view text, std::wstring_view pattern) const;

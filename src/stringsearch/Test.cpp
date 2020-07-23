@@ -166,7 +166,7 @@ TEST_CASE("sort works", "[SuffixSort]") {
 TEST_CASE("bound", "[SuffixArray]") {
 	//       0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10| 11| 12| 13
 	// SA = 13 | 1 | 4 | 8 | 11| 0 | 3 | 2 | 7 | 6 | 5 | 10| 9 | 12
-	const SuffixArray array(TestString);
+	const auto array = SuffixArray(TestSuffixArray);
 
 	SECTION("lowerBound") {
 		const auto [pattern, expected] = GENERATE(Catch::Generators::table<std::wstring_view, Index>({
@@ -196,7 +196,7 @@ TEST_CASE("bound", "[SuffixArray]") {
 }
 
 TEST_CASE("OldUniqueSearchLookup findUnique", "[OldUniqueSearchLookup]") {
-	const SuffixArray array(TestString);
+	const auto array = SuffixArray(TestSuffixArray);
 	const OldUniqueSearchLookup oldSearch(TestString);
 
 	SECTION("full") {
@@ -247,7 +247,7 @@ TEST_CASE("OldUniqueSearchLookup findUnique", "[OldUniqueSearchLookup]") {
 }
 
 TEST_CASE("UniqueSearchLookup findUnique", "[UniqueSearchLookup]") {
-	const SuffixArray array(TestString);
+	const auto array = SuffixArray(TestSuffixArray);
 	const UniqueSearchLookup search(TestString, array);
 
 	SECTION("full") {
@@ -298,7 +298,7 @@ TEST_CASE("UniqueSearchLookup findUnique", "[UniqueSearchLookup]") {
 }
 
 TEST_CASE("iterate", "[UniqueItemsIterator]") {
-	const SuffixArray array(TestString);
+	const auto array = SuffixArray(TestSuffixArray);
 	const UniqueSearchLookup lookup(TestString, array);
 	const UniqueItemsIteratorEnd end;
 
