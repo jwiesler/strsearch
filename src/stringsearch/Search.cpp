@@ -7,7 +7,7 @@
 #include "stringsearch/SuffixSort.hpp"
 
 namespace stringsearch {
-	ItemsLookup::ItemsLookup(const std::wstring_view text) {
+	ItemsLookup::ItemsLookup(const std::u16string_view text) {
 		items_.reserve(text.size());
 
 		auto index = Index(0);
@@ -22,7 +22,7 @@ namespace stringsearch {
 		itemCount_ = index;
 	}
 
-	OldUniqueSearchLookup::OldUniqueSearchLookup(const std::wstring_view text) : ItemsLookup(text) {
+	OldUniqueSearchLookup::OldUniqueSearchLookup(const std::u16string_view text) : ItemsLookup(text) {
 		itemEnds_.reserve(itemCount());
 		auto index = Index(0);
 		for(auto it = text.begin(); it != text.end(); ++it) {
@@ -133,18 +133,18 @@ namespace stringsearch {
 		return write;
 	}
 
-	void CreateArray(const std::wstring_view text, const Span<Index> sa) {
+	void CreateArray(const std::u16string_view text, const Span<Index> sa) {
 		std::iota(sa.begin(), sa.end(), Index(0));
 		SuffixSortInPlace(text, sa);
 	}
 
 	SuffixArray::SuffixArray(const Span<const Index> array) : sa_(array.begin(), array.end()) {}
 
-	SuffixArray::SuffixArray(const std::wstring_view text) : sa_(text.size()) {
+	SuffixArray::SuffixArray(const std::u16string_view text) : sa_(text.size()) {
 		CreateArray(text, sa_);
 	}
 
-	FindResult SuffixArray::find(const std::wstring_view text, const std::wstring_view pattern) const {
+	FindResult SuffixArray::find(const std::u16string_view text, const std::u16string_view pattern) const {
 		const auto lower = lowerBound(sa_.begin(), sa_.end(), text, pattern);
 		const auto upper = upperBound(lower, sa_.end(), text, pattern);
 
@@ -152,7 +152,7 @@ namespace stringsearch {
 	}
 
 	IndexPtr SuffixArray::lowerBound(const IndexPtr begin, const IndexPtr end,
-												const std::wstring_view text, const std::wstring_view pattern) {
+												const std::u16string_view text, const std::u16string_view pattern) {
 		return std::lower_bound(begin, end, Index(0), [&](const Index &index, auto) {
 			const auto suffix = GetSuffix(text, index, pattern.size());
 			return std::lexicographical_compare(suffix.begin(), suffix.end(), pattern.begin(), pattern.end());
@@ -160,7 +160,7 @@ namespace stringsearch {
 	}
 
 	IndexPtr SuffixArray::upperBound(const IndexPtr begin, const IndexPtr end,
-												const std::wstring_view text, const std::wstring_view pattern) {
+												const std::u16string_view text, const std::u16string_view pattern) {
 		return std::upper_bound(begin, end, Index(0), [&](auto, const Index &index) {
 			const auto suffix = GetSuffix(text, index, pattern.size());
 			return std::lexicographical_compare(pattern.begin(), pattern.end(), suffix.begin(), suffix.end());
@@ -171,7 +171,7 @@ namespace stringsearch {
 		return Index(std::distance(sa_.begin(), it));
 	}
 
-	UniqueSearchLookup::UniqueSearchLookup(const std::wstring_view text, const SuffixArray &sa) : ItemsLookup(text), suffixArray_(sa) {
+	UniqueSearchLookup::UniqueSearchLookup(const std::u16string_view text, const SuffixArray &sa) : ItemsLookup(text), suffixArray_(sa) {
 		previousEntryOfSameItem_.reserve(sa.get().size());
 		std::vector<Index> lastIndexOfWord(itemCount(), Index(-1));
 		for(auto it = sa.begin(); it != sa.end(); ++it) {
@@ -210,12 +210,12 @@ namespace stringsearch {
 		return isDuplicateInRange(begin, previousEntryOf(suffixArray_.indexOf(ptr)));
 	}
 
-	Search::Search(const std::wstring_view text)
+	Search::Search(const std::u16string_view text)
 		: suffixArray_(text),
 			itemsLookup_(text, suffixArray()),
 			text_(text) {}
 
-	FindResult Search::find(const std::wstring_view pattern) const {
+	FindResult Search::find(const std::u16string_view pattern) const {
 		return suffixArray_.find(text_, pattern);
 	}
 
@@ -235,7 +235,7 @@ namespace stringsearch {
 		return std::distance(result_.begin(), it_);
 	}
 
-	std::wstring_view GetSuffix(const std::wstring_view text, const Index index, const size_t length) {
+	std::u16string_view GetSuffix(const std::u16string_view text, const Index index, const size_t length) {
 		return text.substr(index, length);
 	}
 }

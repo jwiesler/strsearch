@@ -125,20 +125,20 @@ namespace stringsearch {
 		});
 	}
 
-	TextIterator ToTextIterator(const wchar_t *characters) {
+	TextIterator ToTextIterator(const char16_t *characters) {
 		return Utf16TextIterator(characters);
 	}
 
-	const wchar_t *BeginPtr(const std::wstring_view view) {
+	const char16_t *BeginPtr(const std::u16string_view view) {
 		return view.data();
 	}
 
-	const wchar_t *EndPtr(const std::wstring_view view) {
+	const char16_t *EndPtr(const std::u16string_view view) {
 		return view.data();
 	}
 	
 	template<typename Derived>
-	void SuffixSort(const std::wstring_view characters, const Span<Index> sa, Derived derived) {
+	void SuffixSort(const std::u16string_view characters, const Span<Index> sa, Derived derived) {
 		SuffixSort(ToTextIterator(BeginPtr(characters)), ToTextIterator(EndPtr(characters)), sa, derived);
 	}
 	
@@ -171,37 +171,37 @@ namespace stringsearch {
 	}
 
 	template<typename Derived>
-	void SuffixSortMax(const std::wstring_view characters, const Span<Index> sa, const size_t max, Derived derived) {
+	void SuffixSortMax(const std::u16string_view characters, const Span<Index> sa, const size_t max, Derived derived) {
 		SuffixSortMax(ToTextIterator(BeginPtr(characters)), ToTextIterator(EndPtr(characters)), sa, max, derived);
 	}
 	
-	void SuffixSortStd(const std::wstring_view characters, const Span<Index> sa) {
+	void SuffixSortStd(const std::u16string_view characters, const Span<Index> sa) {
 		SuffixSortStd(ToTextIterator(BeginPtr(characters)), ToTextIterator(EndPtr(characters)), sa);
 	}
 	
-	void SuffixSortSharedBuffer(const std::wstring_view characters, const Span<Index> sa) {
+	void SuffixSortSharedBuffer(const std::u16string_view characters, const Span<Index> sa) {
 		std::vector<Index> buffer(sa.size());
 		SuffixSort(characters, sa, SharedBuffer{buffer});
 	}
 
-	void SuffixSortOwnBuffer(const std::wstring_view characters, const Span<Index> sa) {
+	void SuffixSortOwnBuffer(const std::u16string_view characters, const Span<Index> sa) {
 		SuffixSort(characters, sa, OwnBuffer());
 	}
 
-	void SuffixSortInPlace(const std::wstring_view characters, const Span<Index> sa) {
+	void SuffixSortInPlace(const std::u16string_view characters, const Span<Index> sa) {
 		SuffixSort(characters, sa, InPlace());
 	}
 
-	void SuffixSortSharedBufferMax(const std::wstring_view characters, const Span<Index> sa, const size_t max) {
+	void SuffixSortSharedBufferMax(const std::u16string_view characters, const Span<Index> sa, const size_t max) {
 		std::vector<Index> buffer(sa.size());
 		SuffixSortMax(characters, sa, max, SharedBuffer{buffer});
 	}
 
-	void SuffixSortOwnBufferMax(const std::wstring_view characters, const Span<Index> sa, const size_t max) {
+	void SuffixSortOwnBufferMax(const std::u16string_view characters, const Span<Index> sa, const size_t max) {
 		SuffixSortMax(characters, sa, max, OwnBuffer());
 	}
 
-	void SuffixSortInPlaceMax(const std::wstring_view characters, const Span<Index> sa, const size_t max) {
+	void SuffixSortInPlaceMax(const std::u16string_view characters, const Span<Index> sa, const size_t max) {
 		SuffixSortMax(characters, sa, max, InPlace());
 	}
 }

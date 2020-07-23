@@ -7,9 +7,9 @@
 #include "stringsearch/SuffixSort.hpp"
 
 using namespace std::literals;
-constexpr wchar_t TestCharArray[] = { L'A', L'\0', L'B', L'B', L'\0', L'C', L'C', L'C', L'\0', L'D', L'D', L'\0', L'E', L'\0'};
+constexpr char16_t TestCharArray[] = { u'A', u'\0', u'B', u'B', u'\0', u'C', u'C', u'C', u'\0', u'D', u'D', u'\0', u'E', u'\0'};
 constexpr auto TestCharCount = std::size(TestCharArray);
-constexpr auto TestString = std::wstring_view(TestCharArray, TestCharCount);
+constexpr auto TestString = std::u16string_view(TestCharArray, TestCharCount);
 
 using namespace stringsearch;
 
@@ -117,17 +117,17 @@ void CollectionsEqual(IteratorABegin &&abegin, IteratorAEnd &&aend, Utf16TextIte
 }
 
 TEST_CASE("utf16 is iterated correctly", "[Utf16TextIterator]") {
-	const wchar_t str[] = { 0x0054, 0x0950 };
+	const char16_t str[] = { 0x0054, 0x0950 };
 	const auto *cstr = reinterpret_cast<const char *>(str);
 	
 	SECTION("basic assumptions") {
 		REQUIRE(str[0] == 0x0054);
 		REQUIRE(str[1] == 0x0950);
 		
-		REQUIRE(cstr[0] == 0x54);
-		REQUIRE(cstr[1] == 0x00);
-		REQUIRE(cstr[2] == 0x50);
-		REQUIRE(cstr[3] == 0x09);
+		CHECK(cstr[0] == 0x54);
+		CHECK(cstr[1] == 0x00);
+		CHECK(cstr[2] == 0x50);
+		CHECK(cstr[3] == 0x09);
 	}
 	
 	SECTION("small sample from the start") {
@@ -191,12 +191,12 @@ TEST_CASE("bound", "[SuffixArray]") {
 	const auto array = SuffixArray(TestSuffixArray);
 
 	SECTION("lowerBound") {
-		const auto [pattern, expected] = GENERATE(Catch::Generators::table<std::wstring_view, Index>({
-			std::make_tuple(L"A"sv, 5),
-			std::make_tuple(L"B"sv, 6),
-			std::make_tuple(L"C"sv, 8),
-			std::make_tuple(L"D"sv, 11),
-			std::make_tuple(L"E"sv, 13)
+		const auto [pattern, expected] = GENERATE(Catch::Generators::table<std::u16string_view, Index>({
+			std::make_tuple(u"A"sv, 5),
+			std::make_tuple(u"B"sv, 6),
+			std::make_tuple(u"C"sv, 8),
+			std::make_tuple(u"D"sv, 11),
+			std::make_tuple(u"E"sv, 13)
 		}));
 		
 		auto ptr = SuffixArray::lowerBound(array.begin(), array.end(), TestString, pattern);
@@ -204,12 +204,12 @@ TEST_CASE("bound", "[SuffixArray]") {
 	}
 
 	SECTION("upperBound") {
-		const auto [pattern, expected] = GENERATE(Catch::Generators::table<std::wstring_view, Index>({
-			std::make_tuple(L"A"sv, 6),
-			std::make_tuple(L"B"sv, 8),
-			std::make_tuple(L"C"sv, 11),
-			std::make_tuple(L"D"sv, 13),
-			std::make_tuple(L"E"sv, 14)
+		const auto [pattern, expected] = GENERATE(Catch::Generators::table<std::u16string_view, Index>({
+			std::make_tuple(u"A"sv, 6),
+			std::make_tuple(u"B"sv, 8),
+			std::make_tuple(u"C"sv, 11),
+			std::make_tuple(u"D"sv, 13),
+			std::make_tuple(u"E"sv, 14)
 		}));
 		
 		auto ptr = SuffixArray::upperBound(array.begin(), array.end(), TestString, pattern);
@@ -222,12 +222,12 @@ TEST_CASE("OldUniqueSearchLookup findUnique", "[OldUniqueSearchLookup]") {
 	const OldUniqueSearchLookup oldSearch(TestString);
 
 	SECTION("full") {
-		const auto [pattern, consumed, foundCount, resultIndex] = GENERATE(Catch::Generators::table<std::wstring_view, size_t, size_t, Index>({
-			std::make_tuple(L"A"sv, 1, 1, 0),
-			std::make_tuple(L"B"sv, 2, 1, 2),
-			std::make_tuple(L"C"sv, 3, 1, 5),
-			std::make_tuple(L"D"sv, 2, 1, 9),
-			std::make_tuple(L"E"sv, 1, 1, 12)
+		const auto [pattern, consumed, foundCount, resultIndex] = GENERATE(Catch::Generators::table<std::u16string_view, size_t, size_t, Index>({
+			std::make_tuple(u"A"sv, 1, 1, 0),
+			std::make_tuple(u"B"sv, 2, 1, 2),
+			std::make_tuple(u"C"sv, 3, 1, 5),
+			std::make_tuple(u"D"sv, 2, 1, 9),
+			std::make_tuple(u"E"sv, 1, 1, 12)
 		}));
 		
 		std::array<Index, 10> output{};
@@ -240,12 +240,12 @@ TEST_CASE("OldUniqueSearchLookup findUnique", "[OldUniqueSearchLookup]") {
 	}
 
 	SECTION("partial") {
-		const auto [pattern, partialConsumed, partialFound] = GENERATE(Catch::Generators::table<std::wstring_view, size_t, size_t>({
-			std::make_tuple(L"A"sv, 1, 1),
-			std::make_tuple(L"B"sv, 1, 1),
-			std::make_tuple(L"C"sv, 1, 1),
-			std::make_tuple(L"D"sv, 1, 1),
-			std::make_tuple(L"E"sv, 1, 1)
+		const auto [pattern, partialConsumed, partialFound] = GENERATE(Catch::Generators::table<std::u16string_view, size_t, size_t>({
+			std::make_tuple(u"A"sv, 1, 1),
+			std::make_tuple(u"B"sv, 1, 1),
+			std::make_tuple(u"C"sv, 1, 1),
+			std::make_tuple(u"D"sv, 1, 1),
+			std::make_tuple(u"E"sv, 1, 1)
 		}));
 		
 		std::array<Index, 1> output{};
@@ -257,7 +257,7 @@ TEST_CASE("OldUniqueSearchLookup findUnique", "[OldUniqueSearchLookup]") {
 	}
 
 	SECTION("partial-repeated") {
-		const auto [pattern, partialConsumed, partialFound] = std::make_tuple(L"C"sv, 3, 1);
+		const auto [pattern, partialConsumed, partialFound] = std::make_tuple(u"C"sv, 3, 1);
 		
 		std::array<Index, 2> output{};
 		const auto findResult = array.find(TestString, pattern);
@@ -273,12 +273,12 @@ TEST_CASE("UniqueSearchLookup findUnique", "[UniqueSearchLookup]") {
 	const UniqueSearchLookup search(TestString, array);
 
 	SECTION("full") {
-		const auto [pattern, consumed, foundCount, resultIndex] = GENERATE(Catch::Generators::table<std::wstring_view, size_t, size_t, Index>({
-			std::make_tuple(L"A"sv, 1, 1, 0),
-			std::make_tuple(L"B"sv, 2, 1, 3),
-			std::make_tuple(L"C"sv, 3, 1, 7),
-			std::make_tuple(L"D"sv, 2, 1, 10),
-			std::make_tuple(L"E"sv, 1, 1, 12)
+		const auto [pattern, consumed, foundCount, resultIndex] = GENERATE(Catch::Generators::table<std::u16string_view, size_t, size_t, Index>({
+			std::make_tuple(u"A"sv, 1, 1, 0),
+			std::make_tuple(u"B"sv, 2, 1, 3),
+			std::make_tuple(u"C"sv, 3, 1, 7),
+			std::make_tuple(u"D"sv, 2, 1, 10),
+			std::make_tuple(u"E"sv, 1, 1, 12)
 		}));
 		
 		std::array<Index, 10> output{};
@@ -291,12 +291,12 @@ TEST_CASE("UniqueSearchLookup findUnique", "[UniqueSearchLookup]") {
 	}
 
 	SECTION("partial") {
-		const auto [pattern, partialConsumed, partialFound] = GENERATE(Catch::Generators::table<std::wstring_view, size_t, size_t>({
-			std::make_tuple(L"A"sv, 1, 1),
-			std::make_tuple(L"B"sv, 2, 1),
-			std::make_tuple(L"C"sv, 3, 1),
-			std::make_tuple(L"D"sv, 2, 1),
-			std::make_tuple(L"E"sv, 1, 1)
+		const auto [pattern, partialConsumed, partialFound] = GENERATE(Catch::Generators::table<std::u16string_view, size_t, size_t>({
+			std::make_tuple(u"A"sv, 1, 1),
+			std::make_tuple(u"B"sv, 2, 1),
+			std::make_tuple(u"C"sv, 3, 1),
+			std::make_tuple(u"D"sv, 2, 1),
+			std::make_tuple(u"E"sv, 1, 1)
 		}));
 		
 		std::array<Index, 1> output{};
@@ -308,7 +308,7 @@ TEST_CASE("UniqueSearchLookup findUnique", "[UniqueSearchLookup]") {
 	}
 
 	SECTION("partial-repeated") {
-		const auto [pattern, partialConsumed, partialFound] = std::make_tuple(L"C"sv, 3, 1);
+		const auto [pattern, partialConsumed, partialFound] = std::make_tuple(u"C"sv, 3, 1);
 		
 		std::array<Index, 2> output{};
 		const auto result = array.find(TestString, pattern);

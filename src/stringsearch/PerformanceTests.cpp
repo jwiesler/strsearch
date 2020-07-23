@@ -4,7 +4,9 @@
 #include "stringsearch/SuffixSort.hpp"
 #include <array>
 
-static std::wstring CharactersFromFile(const char *name, size_t count) {
+static_assert(sizeof(wchar_t) == sizeof(char16_t));
+
+static std::u16string CharactersFromFile(const char *name, size_t count) {
 	std::wifstream stream(name);
 	std::wstring str;
 	std::wstring res;
@@ -12,20 +14,20 @@ static std::wstring CharactersFromFile(const char *name, size_t count) {
 		res += str;
 		res += wchar_t(0);
 	}
-	return res;
+	return {res.begin(), res.end()};
 }
 
-static std::wstring CharactersFromStrings(const stringsearch::Span<const std::wstring_view> strs) {
-	std::wstring res;
+static std::u16string CharactersFromStrings(const stringsearch::Span<const std::u16string_view> strs) {
+	std::u16string res;
 	for (auto& str : strs) {
 		res += str;
-		res += wchar_t(0);
+		res += char16_t(0);
 	}
 	return res;
 }
 
 template<typename Function>
-static void TestWithCharacters(benchmark::State &state, const std::wstring &characters, Function &&function) {
+static void TestWithCharacters(benchmark::State &state, const std::u16string_view &characters, Function &&function) {
 	std::vector<int> sa(characters.size());
 	std::iota(sa.begin(), sa.end(), 0);
 
@@ -44,7 +46,7 @@ static void TestWithCharacters(benchmark::State &state, const std::wstring &char
 }\
 BENCHMARK(BM_##fn##samplefn)
 
-constexpr std::array<std::wstring_view, 3> StrsSample {{L"Hallo", L"schmallo", L"test"}};
+constexpr std::array<std::u16string_view, 3> StrsSample {{u"Hallo", u"schmallo", u"test"}};
 
 template<typename Function>
 static void TestWithTinySample(benchmark::State &state, Function &&function) {

@@ -15,7 +15,7 @@ namespace stringsearch {
 		explicit Utf16TextIterator(const char *ptr)
 			: ptr_(ptr) {}
 
-		explicit Utf16TextIterator(const wchar_t *ptr)
+		explicit Utf16TextIterator(const char16_t *ptr)
 			: ptr_(reinterpret_cast<const char *>(ptr) + 1) {}
 
 		Utf16TextIterator &operator++() noexcept {
@@ -53,17 +53,17 @@ namespace stringsearch {
 		}
 	};
 	
-	void SuffixSortStd(std::wstring_view characters, Span<Index> sa);
+	void SuffixSortStd(std::u16string_view characters, Span<Index> sa);
 	
-	void SuffixSortSharedBuffer(std::wstring_view characters, Span<Index> sa);
+	void SuffixSortSharedBuffer(std::u16string_view characters, Span<Index> sa);
 
-	void SuffixSortOwnBuffer(std::wstring_view characters, Span<Index> sa);
+	void SuffixSortOwnBuffer(std::u16string_view characters, Span<Index> sa);
 
-	void SuffixSortInPlace(std::wstring_view characters, Span<Index> sa);
+	void SuffixSortInPlace(std::u16string_view characters, Span<Index> sa);
 	
-	void SuffixSortSharedBufferMax(std::wstring_view characters, Span<Index> sa, size_t max = 80);
+	void SuffixSortSharedBufferMax(std::u16string_view characters, Span<Index> sa, size_t max = 80);
 
-	void SuffixSortOwnBufferMax(std::wstring_view characters, Span<Index> sa, size_t max = 80);
+	void SuffixSortOwnBufferMax(std::u16string_view characters, Span<Index> sa, size_t max = 80);
 
-	void SuffixSortInPlaceMax(std::wstring_view characters, Span<Index> sa, size_t max = 80);
+	void SuffixSortInPlaceMax(std::u16string_view characters, Span<Index> sa, size_t max = 80);
 }

@@ -37,15 +37,15 @@ namespace stringsearch {
 
 	public:
 		explicit SuffixArray(Span<const Index> array);
-		explicit SuffixArray(std::wstring_view text);
+		explicit SuffixArray(std::u16string_view text);
 
-		[[nodiscard]] FindResult find(std::wstring_view text, std::wstring_view pattern) const;
+		[[nodiscard]] FindResult find(std::u16string_view text, std::u16string_view pattern) const;
 
-		[[nodiscard]] static IndexPtr lowerBound(IndexPtr begin, IndexPtr end, std::wstring_view text,
-																std::wstring_view pattern);
+		[[nodiscard]] static IndexPtr lowerBound(IndexPtr begin, IndexPtr end, std::u16string_view text,
+																std::u16string_view pattern);
 
-		[[nodiscard]] static IndexPtr upperBound(IndexPtr begin, IndexPtr end, std::wstring_view text,
-																std::wstring_view pattern);
+		[[nodiscard]] static IndexPtr upperBound(IndexPtr begin, IndexPtr end, std::u16string_view text,
+																std::u16string_view pattern);
 
 		[[nodiscard]] IndexPtr begin() const noexcept { return sa_.begin(); }
 
@@ -70,7 +70,7 @@ namespace stringsearch {
 		size_t itemCount_;
 
 	public:
-		explicit ItemsLookup(std::wstring_view text);
+		explicit ItemsLookup(std::u16string_view text);
 
 		[[nodiscard]] Index getItem(const Index suffix) const { return items_[suffix]; }
 
@@ -81,7 +81,7 @@ namespace stringsearch {
 		std::vector<Index> itemEnds_;
 
 	public:
-		explicit OldUniqueSearchLookup(std::wstring_view text);
+		explicit OldUniqueSearchLookup(std::u16string_view text);
 
 		[[nodiscard]] Index getItemEnd(const Index item) const { return itemEnds_[item]; }
 
@@ -107,7 +107,7 @@ namespace stringsearch {
 		std::vector<Index> previousEntryOfSameItem_;
 
 	public:
-		UniqueSearchLookup(std::wstring_view text, const SuffixArray &sa);
+		UniqueSearchLookup(std::u16string_view text, const SuffixArray &sa);
 
 		[[nodiscard]] Index previousEntryOf(Index saIndex) const noexcept;
 
@@ -124,17 +124,17 @@ namespace stringsearch {
 		[[nodiscard]] UniqueItemsIterator uniqueItemsInRange(FindResult result, unsigned int offset) const noexcept;
 	};
 
-	[[nodiscard]] std::wstring_view GetSuffix(std::wstring_view text, Index index, size_t length);
+	[[nodiscard]] std::u16string_view GetSuffix(std::u16string_view text, Index index, size_t length);
 
 	class Search {
 		SuffixArray suffixArray_;
 		UniqueSearchLookup itemsLookup_;
-		std::wstring_view text_;
+		std::u16string_view text_;
 
 	public:
-		explicit Search(std::wstring_view text);
+		explicit Search(std::u16string_view text);
 
-		[[nodiscard]] FindResult find(std::wstring_view pattern) const;
+		[[nodiscard]] FindResult find(std::u16string_view pattern) const;
 
 		[[nodiscard]] FindUniqueResult findUnique(FindResult result, Span<Index> outputIndices, unsigned int offset) const;
 
