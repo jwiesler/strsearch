@@ -4,18 +4,19 @@
 #include <numeric>
 #include <fstream>
 #include <random>
-
-static_assert(sizeof(wchar_t) == sizeof(char16_t));
+#include <locale>
+#include <codecvt>
 
 static std::u16string CharactersFromFile(const char *name, size_t count = std::numeric_limits<size_t>::max()) {
-	std::wifstream stream(name);
-	std::wstring str;
-	std::wstring res;
+	std::ifstream stream(name);
+	std::string str;
+	std::string res;
 	while(std::getline(stream, str) && count--) {
 		res += str;
-		res += wchar_t(0);
+		res += char(0);
 	}
-	return {res.begin(), res.end()};
+	std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> utf16conv;
+   return utf16conv.from_bytes(res);
 }
 
 static std::u16string CharactersFromStrings(const stringsearch::Span<const std::u16string_view> strs) {
