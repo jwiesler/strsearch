@@ -5,10 +5,16 @@
 #include <vector>
 #include "stringsearch/Utf16Le.hpp"
 #include <cassert>
+#include <utility>
 
 namespace stringsearch {
 	using TextIterator = Utf16LETextIterator;
 
+	template<typename T, typename = std::void_t<decltype(std::declval<T>() <= std::declval<T>())>>
+	void RangeCheck(T begin, T end) {
+		assert(begin <= end);
+	}
+	
 	template<typename T>
 	void RangeCheck(T *begin, T *end) {
 		assert(begin <= end);
@@ -114,11 +120,31 @@ namespace stringsearch {
 		}
 	};
 
+	// Taken from MSVCs implementation of std::exclusive_scan
+	template<typename InIt, typename OutIt, typename Ty, typename BinOp = std::plus<>>
+	OutIt ExclusiveScan(InIt first, const InIt last, OutIt dest, Ty val, BinOp reduceOp = BinOp()) {
+		RangeCheck(first, last);
+		if(first != last) {
+			for(;;) {
+				Ty tmp(reduceOp(val, *first));
+				*dest = val;
+				++dest;
+				++first;
+				if(first == last) {
+					break;
+				}
+
+				val = std::move(tmp);
+			}
+		}
+
+		return dest;
+	}
+
 	template<typename Derived>
 	void SuffixSort(const TextIterator text, const TextIterator textEnd, const Span<Index> sa, Derived derived) {
 		RangeCheck(text, textEnd);
 		std::array<Index, 0x100> buckets{};
-
 		Count(text, textEnd, sa, buckets);
 
 		const auto allInOne = size_t(buckets[ToBucketIndex(text, textEnd, sa[0])]) == sa.size();
@@ -129,7 +155,7 @@ namespace stringsearch {
 			return;
 		}
 
-		std::exclusive_scan(buckets.begin(), buckets.end(), buckets.begin(), Index(0));
+		ExclusiveScan(buckets.begin(), buckets.end(), buckets.begin(), Index(0));
 		derived.moveElements(text, textEnd, buckets, sa);
 
 		DispatchBuckets(nextText, buckets, sa, [&](const auto newText, const auto range) {
@@ -168,7 +194,7 @@ namespace stringsearch {
 			return;
 		}
 
-		std::exclusive_scan(buckets.begin(), buckets.end(), buckets.begin(), Index(0));
+		ExclusiveScan(buckets.begin(), buckets.end(), buckets.begin(), Index(0));
 		derived.moveElements(text, textEnd, buckets, sa);
 
 		DispatchBuckets(nextText, buckets, sa, [&](const auto newText, const auto range) {
