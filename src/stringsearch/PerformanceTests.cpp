@@ -111,8 +111,8 @@ static void BenchmarkSAFindWithCharacters(benchmark::State &state, const std::u1
 	const stringsearch::SuffixArray sa(characters);
 	
 	std::mt19937 gen(42);  // NOLINT(cert-msc32-c)
-	const std::uniform_int_distribution<stringsearch::Index> sizeDistribution(1, 6);
-	const std::uniform_int_distribution<stringsearch::Index> offsetDistribution(0, characters.size() - 6);
+	std::uniform_int_distribution<stringsearch::Index> sizeDistribution(1, 6);
+	std::uniform_int_distribution<stringsearch::Index> offsetDistribution(0, characters.size() - 6);
 	
 	for(auto _ : state) {
 		state.PauseTiming();
@@ -136,8 +136,8 @@ template<typename Function>
 static void BenchmarkUniqueWithCharacters(benchmark::State &state, const stringsearch::SuffixArray &sa, const std::u16string_view characters, Function && function) {
 	std::mt19937 gen(42);  // NOLINT(cert-msc32-c)
 	const auto upper = state.range(0);
-	const std::uniform_int_distribution<stringsearch::Index> sizeDistribution(1, upper);
-	const std::uniform_int_distribution<stringsearch::Index> offsetDistribution(0, characters.size() - 6);
+	std::uniform_int_distribution<stringsearch::Index> sizeDistribution(1, upper);
+	std::uniform_int_distribution<stringsearch::Index> offsetDistribution(0, characters.size() - 6);
 	stringsearch::UniqueSearchLookup lookup(characters, sa);
 	stringsearch::OldUniqueSearchLookup oldUniqueSearchLookup(characters);
 	std::vector<stringsearch::Index> output(characters.size());
