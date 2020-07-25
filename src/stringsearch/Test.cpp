@@ -14,19 +14,6 @@
 
 using namespace std::literals;
 
-constexpr char16_t ToLittleEndian(const char16_t ch) noexcept {
-	return ((ch << 8) & 0xFF00) | (ch >> 8);
-}
-
-template<size_t Size, typename T, typename Sequence>
-constexpr std::array<T, Size> ToLittleEndianSequence(const Sequence &seq) noexcept {
-	std::array<T, Size> res{};
-	for(size_t i = 0; i < Size; ++i)
-		res[i] = ToLittleEndian(seq[i]);
-
-	return res;
-}
-
 template<typename T, typename... Tys>
 constexpr std::array<T, sizeof...(Tys)> MakeArray(Tys &&... tys) {
 	return {{ static_cast<T>(std::forward<Tys>(tys))... }};
@@ -143,17 +130,6 @@ void CollectionsEqual(IteratorABegin &&abegin, IteratorAEnd &&aend, Utf16LETextI
 		CHECK(*abegin == *bbegin);
 	}
 	CHECK(bbegin == bend);
-}
-
-TEST_CASE("utf16le is compared correctly", "[LessThanUtf16Le]") {
-	CHECK(LessThanUtf16Le(0x0001, 0x0002));
-	CHECK_FALSE(LessThanUtf16Le(0x0002, 0x0001));
-	
-	CHECK(LessThanUtf16Le(0x0100, 0x0200));
-	CHECK_FALSE(LessThanUtf16Le(0x0200, 0x0100));
-	
-	CHECK(LessThanUtf16Le(0x0100, 0x0001));
-	CHECK_FALSE(LessThanUtf16Le(0x0001, 0x0100));
 }
 
 TEST_CASE("utf16le is iterated correctly", "[Utf16LETextIterator]") {

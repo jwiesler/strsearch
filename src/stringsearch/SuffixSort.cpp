@@ -74,8 +74,7 @@ namespace stringsearch {
 		std::sort(sa.begin(), sa.end(), [&](const Index a, const Index b) {
 			return std::lexicographical_compare(
 				text + a, end, 
-				text + b, end,
-				LessThanUtf16Le
+				text + b, end
 			);
 		});
 	}

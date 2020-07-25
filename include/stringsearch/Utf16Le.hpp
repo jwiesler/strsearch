@@ -3,18 +3,8 @@
 #include <algorithm>
 
 namespace stringsearch {
-	constexpr auto LessThanUtf16Le = [](const char16_t a, const char16_t b) noexcept {
-		const auto a1 = (a & 0xFF);
-		const auto b1 = (b & 0xFF);
-		if(a1 < b1)
-			return true;
-		if(b1 < a1)
-			return false;
-		return (a >> 8) < (b >> 8);
-	};
-
 	[[nodiscard]] inline bool LessThan(const std::u16string_view a, const std::u16string_view b) noexcept {
-		return std::lexicographical_compare(a.begin(), a.end(), b.begin(), b.end(), LessThanUtf16Le);
+		return std::lexicographical_compare(a.begin(), a.end(), b.begin(), b.end());
 	}
 	
 	class Utf16LETextIterator {
