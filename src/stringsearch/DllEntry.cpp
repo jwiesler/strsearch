@@ -9,8 +9,18 @@
 
 using namespace stringsearch;
 
-Search &Get(const InstanceHandle ptr) {
-	return *reinterpret_cast<Search *>(ptr);
+Logger::~Logger() noexcept {
+	try {
+		const auto str = stream_.str();
+		if(log_)
+			log_(str.data());
+		else
+			std::cout << str << std::endl;
+	} catch(...) {}
+}
+
+SearchInstance& SearchInstance::fromHandle(const InstanceHandle ptr) {
+	return *reinterpret_cast<SearchInstance *>(ptr);
 }
 
 void SuffixSortSharedBuffer(const char16_t *characters, int *saBegin, int *saEnd) {
@@ -33,22 +43,23 @@ decltype(auto) Time(ClockDuration &duration, F && f) {
 	return res;
 }
 
-InstanceHandle CreateSearchInstanceFromText(const char16_t *charactersBegin, const size_t count) {
-	std::cout << "Creating instance\n";
+InstanceHandle CreateSearchInstanceFromText(const char16_t *charactersBegin, const size_t count, const LogCallback callback) {
+	Logger(callback) << "Creating instance";
 	const auto text = std::u16string_view(charactersBegin, count);
 	ClockDuration createTime;
 	const auto ptr = Time(createTime, [&]() {
-		return new Search(text);
+		return new SearchInstance(text, callback);
 	});
-	std::cout << "Create took " << createTime.count() << "ns\n";
+	ptr->log() << "Create took " << std::chrono::duration_cast<std::chrono::milliseconds>(createTime).count() << "ms";
 	return ptr;
 }
 
 void DestroySearchInstance(const InstanceHandle instance) {
 	if(instance == nullptr)
 		return;
-	std::cout << "Destroying instance\n";
-	delete &Get(instance);
+	auto &search = SearchInstance::fromHandle(instance);
+	search.log() << "Destroying instance";
+	delete &search;
 }
 
 Result CountOccurences(const InstanceHandle instance, const char16_t *patternBegin, const size_t count, int *occurrences) {
@@ -57,8 +68,8 @@ Result CountOccurences(const InstanceHandle instance, const char16_t *patternBeg
 	if(patternBegin == nullptr && occurrences == nullptr)
 		return Result::NullPointer;
 
-	const auto &sa = Get(instance);
-	const auto result = sa.find(std::u16string_view(patternBegin, count));
+	const auto &sa = SearchInstance::fromHandle(instance);
+	const auto result = sa.search().find(std::u16string_view(patternBegin, count));
 	*occurrences = int(std::distance(result.begin(), result.end()));
 	return Result::Ok;
 }
@@ -69,35 +80,29 @@ Result FindUniqueItems(const InstanceHandle instance, const char16_t *patternBeg
 	if(output == nullptr && patternBegin == nullptr)
 		return Result::NullPointer;
 	
-	const auto &sa = Get(instance);
+	const auto &search = SearchInstance::fromHandle(instance);
 	const auto pattern = std::u16string_view(patternBegin, count);
-
-	std::cout << std::hex << std::showbase;
-	for(const auto ch : pattern) {
-		std::cout << unsigned(ch) << ' ';
-	}
-	std::cout << '\n';
 
 	ClockDuration searchTime;
 	const auto searchResult = Time(searchTime, [&]() {
-		return sa.find(pattern);
+		return search.search().find(pattern);
 	});
 	
-	std::cout << "Search took " << searchTime.count() << "ns\n";
+	search.log() << "Search took " << searchTime.count() << "ns";
 	std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> cv;
-	std::cout << "Found " << searchResult.size() << " occurrences for " << std::quoted(cv.to_bytes(pattern.data(), pattern.data() + pattern.size())) << ", skipping " << offset << '\n';
+	search.log() << "Found " << searchResult.size() << " occurrences for " << std::quoted(cv.to_bytes(pattern.data(), pattern.data() + pattern.size())) << ", skipping " << offset;
 	if(searchResult.size() < size_t(offset))
 		return Result::OffsetOutOfBounds;
 	
 	ClockDuration uniqueTime;
 	const auto uniqueResult = Time(uniqueTime, [&]() {
-		const auto res = sa.findUnique(searchResult, Span<Index>(output, outputCount), offset);
+		const auto res = search.search().findUnique(searchResult, Span<Index>(output, outputCount), offset);
 		for(auto &index : Span<Index>(output, res.Count))
-			index = sa.itemsLookup().getItem(index);
+			index = search.search().itemsLookup().getItem(index);
 		return res;
 	});
 	
-	std::cout << "Unique took " << uniqueTime.count() << "ns\n";
+	search.log() << "Unique took " << uniqueTime.count() << "ns";
 	
 	if(result)
 		*result = FindUniqueItemsResult{searchResult.size(), uniqueResult.Count, uniqueResult.Consumed};
