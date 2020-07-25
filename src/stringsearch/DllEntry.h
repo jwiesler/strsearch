@@ -30,6 +30,9 @@ public:
 	explicit Logger(const LogCallback log) noexcept : log_(log) {}
 	~Logger() noexcept;
 
+	DISABLE_COPY(Logger);
+	DISABLE_MOVE(Logger);
+
 	template<typename T>
 	Logger& operator<<(const T &t) {
 		stream_ << t;
@@ -45,7 +48,10 @@ public:
 	SearchInstance(const std::u16string_view text, const LogCallback callback)
 		: search_(text),
 			log_(callback) {}
-
+	
+	DISABLE_COPY(SearchInstance);
+	DISABLE_MOVE(SearchInstance);
+	
 	[[nodiscard]] const stringsearch::Search& search() const { return search_; }
 
 	[[nodiscard]] Logger log() const { return Logger(log_); }

@@ -134,6 +134,9 @@ namespace stringsearch {
 	public:
 		explicit Search(std::u16string_view text);
 
+		DISABLE_COPY(Search);
+		DISABLE_MOVE(Search);
+
 		[[nodiscard]] FindResult find(std::u16string_view pattern) const;
 
 		[[nodiscard]] FindUniqueResult findUnique(FindResult result, Span<Index> outputIndices, unsigned int offset) const;
