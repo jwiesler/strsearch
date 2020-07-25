@@ -49,14 +49,34 @@ if(STRSEARCH_ENABLE_SHARED)
 		PREFIX ""
 		OUTPUT_NAME "strsearch")
 	target_link_libraries(strsearchdll libstrsearch)
+
+	set(DLL_TARGET_DIR "D:/Code/C#/Projekte/TS3AudioBot/TS3AudioBot/bin/Debug/netcoreapp3.1/")
+	add_custom_command(TARGET strsearchdll POST_BUILD COMMAND ${CMAKE_COMMAND} -E rm "${DLL_TARGET_DIR}strsearch.dll")
+	add_custom_command(TARGET strsearchdll POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_BINARY_DIR}/strsearch.dll" ${DLL_TARGET_DIR})
 endif()
 
 if(STRSEARCH_ENABLE_BENCHMARK)
 	message("Building benchmarks.")
 
+	option(BM_RADIX_SORT "Benchmark radix sort" ON)
+	option(BM_SUFFIX_ARRAY_FIND "Benchmark suffix array find" ON)
+	option(BM_UNIQUE "Find unique results" ON)
+	
 	set(BENCHMARK_ENABLE_TESTING OFF)
 	add_subdirectory(benchmark)
 	add_executable(perfstrsearch "src/stringsearch/PerformanceTests.cpp")
+	
+	if(BM_RADIX_SORT)
+		target_compile_definitions(perfstrsearch PUBLIC BM_RADIX_SORT)
+	endif()
+
+	if(BM_SUFFIX_ARRAY_FIND)
+		target_compile_definitions(perfstrsearch PUBLIC BM_SUFFIX_ARRAY_FIND)
+	endif()
+
+	if(BM_UNIQUE)
+		target_compile_definitions(perfstrsearch PUBLIC BM_UNIQUE)
+	endif()
 	target_link_libraries(perfstrsearch libstrsearch benchmark::benchmark)
 endif()
 
@@ -66,14 +86,6 @@ if(STRSEARCH_ENABLE_TESTS)
 	add_executable(teststringsearch "src/stringsearch/Test.cpp")
 	target_include_directories(teststringsearch PRIVATE "Catch2/single_include")
 	target_link_libraries(teststringsearch libstrsearch)
-endif()
-
-if(STRSEARCH_ENABLE_MAIN)
-	message("Building main.")
-
-	add_executable(stringsearchx "src/stringsearch/Main.cpp")
-	target_include_directories(stringsearchx PRIVATE "src")
-	target_link_libraries(stringsearchx libstrsearch)
 endif()
 
 ################################################################################
