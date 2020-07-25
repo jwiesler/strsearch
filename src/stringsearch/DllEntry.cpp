@@ -21,13 +21,14 @@ void SuffixSortInPlace(const char16_t *characters, int *saBegin, int *saEnd) {
 	SuffixSortInPlaceMax(characters, MakeSpan(saBegin, saEnd));
 }
 
+using Clock = std::chrono::high_resolution_clock;
 using ClockDuration = std::chrono::high_resolution_clock::duration;
 
 template<typename F>
 decltype(auto) Time(ClockDuration &duration, F && f) {
-	const auto before = std::chrono::high_resolution_clock::now();
+	const auto before = Clock::now();
 	decltype(auto) res = f();
-	const auto after = std::chrono::high_resolution_clock::now();
+	const auto after = Clock::now();
 	duration = after - before;
 	return res;
 }
@@ -71,13 +72,19 @@ Result FindUniqueItems(const InstanceHandle instance, const char16_t *patternBeg
 	const auto &sa = Get(instance);
 	const auto pattern = std::u16string_view(patternBegin, count);
 
+	std::cout << std::hex << std::showbase;
+	for(const auto ch : pattern) {
+		std::cout << unsigned(ch) << ' ';
+	}
+	std::cout << '\n';
+
 	ClockDuration searchTime;
 	const auto searchResult = Time(searchTime, [&]() {
 		return sa.find(pattern);
 	});
 	
 	std::cout << "Search took " << searchTime.count() << "ns\n";
-	std::wstring_convert<std::codecvt_utf8<char16_t>, char16_t> cv;
+	std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> cv;
 	std::cout << "Found " << searchResult.size() << " occurrences for " << std::quoted(cv.to_bytes(pattern.data(), pattern.data() + pattern.size())) << ", skipping " << offset << '\n';
 	if(searchResult.size() < size_t(offset))
 		return Result::OffsetOutOfBounds;

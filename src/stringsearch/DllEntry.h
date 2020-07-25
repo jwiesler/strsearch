@@ -24,7 +24,7 @@ extern "C" {
 
 	strsearchdll_EXPORT void strsearchdll_CALLING_CONVENCTION SuffixSortInPlace(const char16_t *characters, stringsearch::Index *saBegin, stringsearch::Index *saEnd);
 
-	strsearchdll_EXPORT void * strsearchdll_CALLING_CONVENCTION CreateSearchInstanceFromText(const char16_t *charactersBegin, size_t count);
+	strsearchdll_EXPORT InstanceHandle strsearchdll_CALLING_CONVENCTION CreateSearchInstanceFromText(const char16_t *charactersBegin, size_t count);
 	
 	strsearchdll_EXPORT void strsearchdll_CALLING_CONVENCTION DestroySearchInstance(InstanceHandle instance);
 
