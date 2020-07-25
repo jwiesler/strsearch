@@ -49,10 +49,6 @@ if(STRSEARCH_ENABLE_SHARED)
 		PREFIX ""
 		OUTPUT_NAME "strsearch")
 	target_link_libraries(strsearchdll libstrsearch)
-
-	set(DLL_TARGET_DIR "D:/Code/C#/Projekte/TS3AudioBot/TS3AudioBot/bin/Debug/netcoreapp3.1/")
-	add_custom_command(TARGET strsearchdll POST_BUILD COMMAND ${CMAKE_COMMAND} -E rm "${DLL_TARGET_DIR}strsearch.dll")
-	add_custom_command(TARGET strsearchdll POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_BINARY_DIR}/strsearch.dll" ${DLL_TARGET_DIR})
 endif()
 
 if(STRSEARCH_ENABLE_BENCHMARK)
