@@ -65,6 +65,14 @@ namespace stringsearch {
 				Consumed(consumed) {}
 	};
 
+	struct FindUniqueInAllResult {
+		size_t TotalCount;
+		size_t Count;
+
+		explicit FindUniqueInAllResult(size_t totalCount, size_t count)
+			: TotalCount(totalCount), Count(count) {}
+	};
+
 	class ItemsLookup {
 		std::vector<Index> items_;
 		size_t itemCount_;
@@ -121,6 +129,8 @@ namespace stringsearch {
 
 		[[nodiscard]] FindUniqueResult findUnique(FindResult result, Span<Index> outputIndices, unsigned int offset = 0) const;
 
+		[[nodiscard]] FindUniqueInAllResult findUniqueInAllOf(Span<const FindResult> results, Span<Index> outputIndices) const;
+
 		[[nodiscard]] UniqueItemsIterator uniqueItemsInRange(FindResult result, unsigned int offset) const noexcept;
 	};
 
@@ -140,6 +150,8 @@ namespace stringsearch {
 		[[nodiscard]] FindResult find(std::u16string_view pattern) const;
 
 		[[nodiscard]] FindUniqueResult findUnique(FindResult result, Span<Index> outputIndices, unsigned int offset) const;
+		
+		[[nodiscard]] FindUniqueInAllResult findUniqueInAllOf(Span<const FindResult> results, Span<Index> outputIndices) const;
 
 		[[nodiscard]] const SuffixArray& suffixArray() const noexcept { return suffixArray_; }
 

@@ -71,4 +71,7 @@ extern "C" {
 	strsearchdll_EXPORT Result strsearchdll_CALLING_CONVENCTION CountOccurences(InstanceHandle instance, const char16_t *patternBegin, size_t count, int *occurrences);
 	
 	strsearchdll_EXPORT Result strsearchdll_CALLING_CONVENCTION FindUniqueItems(InstanceHandle instance, const char16_t *patternBegin, size_t count, stringsearch::Index *output, size_t outputCount, FindUniqueItemsResult *result, unsigned int offset);
+	
+	strsearchdll_EXPORT Result strsearchdll_CALLING_CONVENCTION FindUniqueItemsKeywords(InstanceHandle instance, const char16_t *patternBegin, size_t count,
+																													stringsearch::Index *output, size_t outputCount, FindUniqueItemsResult *result);
 }

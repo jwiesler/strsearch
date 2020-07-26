@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <numeric>
 #include <vector>
+#include <unordered_map>
 
 namespace stringsearch {
 	ItemsLookup::ItemsLookup(const std::u16string_view text) {
@@ -211,6 +212,33 @@ namespace stringsearch {
 		return isDuplicateInRange(begin, previousEntryOf(suffixArray_.indexOf(ptr)));
 	}
 
+	FindUniqueInAllResult UniqueSearchLookup::findUniqueInAllOf(const Span<const FindResult> results, const Span<Index> outputIndices) const {
+		std::unordered_map<Index, int> containedInCountMap;
+		for(const auto &result : results) {
+			for(auto it = uniqueItemsInRange(result, 0); it != UniqueItemsIteratorEnd(); ++it) {
+				const auto suffix = *it;
+				const auto item = getItem(suffix);
+				const auto cit = containedInCountMap.find(item);
+				if(cit == containedInCountMap.end()) {
+					containedInCountMap.emplace(item, 1);
+				} else {
+					++cit->second;
+				}
+			}
+		}
+		
+		std::vector<std::pair<Index, int>> list(containedInCountMap.begin(), containedInCountMap.end());
+		std::sort(list.begin(), list.end(), [](const std::pair<Index, int> &a, const std::pair<Index, int> &b) {
+			return a.second > b.second;
+		});
+
+		auto write = outputIndices.begin();
+		for(auto it = list.begin(); it != list.end() && write != outputIndices.end(); ++it, ++write) {
+			*write = it->first;
+		}
+		return FindUniqueInAllResult(list.size(), std::distance(outputIndices.begin(), write));
+	}
+
 	Search::Search(const std::u16string_view text)
 		: suffixArray_(text),
 			itemsLookup_(text, suffixArray()),
@@ -220,8 +248,12 @@ namespace stringsearch {
 		return suffixArray_.find(text_, pattern);
 	}
 
-	FindUniqueResult Search::findUnique(const FindResult result, const Span<Index> outputIndices, unsigned int offset) const {
+	FindUniqueResult Search::findUnique(const FindResult result, const Span<Index> outputIndices, const unsigned int offset) const {
 		return itemsLookup().findUnique(result, outputIndices, offset);
+	}
+
+	FindUniqueInAllResult Search::findUniqueInAllOf(const Span<const FindResult> results, const Span<Index> outputIndices) const {
+		return itemsLookup().findUniqueInAllOf(results, outputIndices);
 	}
 
 	void UniqueItemsIterator::next() noexcept {

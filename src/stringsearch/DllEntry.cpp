@@ -74,6 +74,13 @@ Result CountOccurences(const InstanceHandle instance, const char16_t *patternBeg
 	return Result::Ok;
 }
 
+FindUniqueResult MakeUniqueAndGetItems(const Search &search, const FindResult &searchResult, const Span<Index> outputIndices, const unsigned int offset) {
+	const auto res = search.findUnique(searchResult, outputIndices, offset);
+	for(auto &index : outputIndices.subspan(0, res.Count))
+		index = search.itemsLookup().getItem(index);
+	return res;
+}
+
 Result FindUniqueItems(const InstanceHandle instance, const char16_t *patternBegin, const size_t count, Index *output, const size_t outputCount, FindUniqueItemsResult *result, const unsigned int offset) {
 	if(instance == nullptr)
 		return Result::InvalidInstance;
@@ -82,6 +89,8 @@ Result FindUniqueItems(const InstanceHandle instance, const char16_t *patternBeg
 	
 	const auto &search = SearchInstance::fromHandle(instance);
 	const auto pattern = std::u16string_view(patternBegin, count);
+
+	const auto outputIndices = Span<Index>(output, outputCount);
 
 	ClockDuration searchTime;
 	const auto searchResult = Time(searchTime, [&]() {
@@ -96,15 +105,76 @@ Result FindUniqueItems(const InstanceHandle instance, const char16_t *patternBeg
 	
 	ClockDuration uniqueTime;
 	const auto uniqueResult = Time(uniqueTime, [&]() {
-		const auto res = search.search().findUnique(searchResult, Span<Index>(output, outputCount), offset);
-		for(auto &index : Span<Index>(output, res.Count))
-			index = search.search().itemsLookup().getItem(index);
-		return res;
+		return MakeUniqueAndGetItems(search.search(), searchResult, outputIndices, offset);
 	});
 	
 	search.log() << "Unique took " << uniqueTime.count() << "ns";
 	
 	if(result)
 		*result = FindUniqueItemsResult{searchResult.size(), uniqueResult.Count, uniqueResult.Consumed};
+	return Result::Ok;
+}
+
+std::vector<std::u16string_view> ParseKeywords(std::u16string_view pattern) {
+	std::vector<std::u16string_view> keywords;
+	auto it = pattern.begin();
+	while(it != pattern.end()) {
+		const auto endIt = std::find(it, pattern.end(), u' ');
+		keywords.emplace_back(pattern.substr(std::distance(pattern.begin(), it), std::distance(it, endIt)));
+		it = endIt;
+		if(endIt == pattern.end())
+			break;
+		++it;
+	}
+	return keywords;
+}
+
+Result FindUniqueItemsKeywords(const InstanceHandle instance, const char16_t *patternBegin, const size_t count,
+										Index * const output, const size_t outputCount, FindUniqueItemsResult * const result) {
+	if(instance == nullptr)
+		return Result::InvalidInstance;
+	if(output == nullptr && patternBegin == nullptr)
+		return Result::NullPointer;
+
+	const auto &search = SearchInstance::fromHandle(instance);
+	const auto pattern = std::u16string_view(patternBegin, count);
+	const auto outputIndices = Span<Index>(output, outputCount);
+
+	ClockDuration fullDuration;
+	ClockDuration parseDuration;
+	ClockDuration findDuration;
+	ClockDuration uniqueDuration;
+	const auto searchResult = Time(fullDuration, [&]() {
+		const auto keywords = Time(parseDuration, [&]() {
+			return ParseKeywords(pattern);
+		});
+
+		const auto findResults = Time(findDuration, [&]() {
+			std::vector<FindResult> results;
+			for(const auto &k : keywords)
+				results.emplace_back(search.search().find(k));
+			return results;
+		});
+
+		if(findResults.size() == 1) {
+			const auto &findResult = findResults[0];
+			const auto res = MakeUniqueAndGetItems(search.search(), findResult, outputIndices, 0);
+			return FindUniqueInAllResult(findResult.size(), res.Count);
+		}
+		
+		const auto res = Time(uniqueDuration, [&]() {
+			return search.search().findUniqueInAllOf(findResults, outputIndices);
+		});
+		return res;
+	});
+
+	search.log() << "Keyword search took " << std::chrono::duration_cast<std::chrono::microseconds>(fullDuration).
+		count() << "us "
+		"(parse keywords: " << parseDuration.count() << "ns"
+		", find keywords: " << findDuration.count() << "ns"
+		", unique: " << uniqueDuration.count() << "ns)";
+
+	if(result)
+		*result = FindUniqueItemsResult{searchResult.TotalCount, searchResult.Count, 0};
 	return Result::Ok;
 }
