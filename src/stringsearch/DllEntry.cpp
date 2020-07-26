@@ -6,6 +6,7 @@
 #include <iomanip>
 #include <locale>
 #include <codecvt>
+#include <algorithm>
 
 using namespace stringsearch;
 
