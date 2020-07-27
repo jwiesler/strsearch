@@ -28,6 +28,7 @@ endif()
 add_library(libstrsearch STATIC "src/stringsearch/Search.cpp" "src/stringsearch/SuffixSort.cpp")
 target_include_directories(libstrsearch PUBLIC "include" "span/include")
 target_include_directories(libstrsearch PRIVATE "src")
+target_compile_options(libstrsearch PUBLIC -fPIC)
 
 add_custom_command(TARGET libstrsearch PRE_BUILD
                    COMMAND ${CMAKE_COMMAND} -E copy_directory
@@ -44,8 +45,7 @@ if(STRSEARCH_ENABLE_SHARED)
 		EXPORT_MACRO_NAME strsearchdll_EXPORT
 		EXPORT_FILE_NAME dllexport.h
 		STATIC_DEFINE strsearchdll_BUILT_AS_STATIC)
-
-	target_compile_definitions(strsearchdll PRIVATE -fPIC)
+		
 	set_target_properties(strsearchdll PROPERTIES 
 		PREFIX ""
 		OUTPUT_NAME "strsearch")
