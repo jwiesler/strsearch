@@ -178,6 +178,6 @@ Result FindUniqueItemsKeywords(const InstanceHandle instance, const char16_t *pa
 		", unique: " << uniqueDuration.count() << "ns)";
 
 	if(result)
-		*result = FindUniqueItemsResult{searchResult.TotalCount, searchResult.Count, 0};
+		*result = FindUniqueItemsResult{searchResult.TotalCount, searchResult.Count, searchResult.Count};
 	return Result::Ok;
 }
