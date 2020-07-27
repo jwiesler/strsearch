@@ -213,23 +213,29 @@ namespace stringsearch {
 	}
 
 	FindUniqueInAllResult UniqueSearchLookup::findUniqueInAllOf(const Span<const FindResult> results, const Span<Index> outputIndices) const {
-		std::unordered_map<Index, int> containedInCountMap;
-		for(const auto &result : results) {
+		struct ContainedInfo {
+			unsigned Count;
+			unsigned FirstContainedResultOffset;
+		};
+		std::unordered_map<Index, ContainedInfo> containedInCountMap;
+		for(auto resultIt = results.begin(); resultIt != results.end(); ++resultIt) {
+			const auto &result = *resultIt;
+			const auto idx = std::distance(results.begin(), resultIt);
 			for(auto it = uniqueItemsInRange(result, 0); it != UniqueItemsIteratorEnd(); ++it) {
 				const auto suffix = *it;
 				const auto item = getItem(suffix);
 				const auto cit = containedInCountMap.find(item);
 				if(cit == containedInCountMap.end()) {
-					containedInCountMap.emplace(item, 1);
+					containedInCountMap.emplace(item, ContainedInfo{1, unsigned(idx)});
 				} else {
-					++cit->second;
+					++cit->second.Count;
 				}
 			}
 		}
 		
-		std::vector<std::pair<Index, int>> list(containedInCountMap.begin(), containedInCountMap.end());
-		std::sort(list.begin(), list.end(), [](const std::pair<Index, int> &a, const std::pair<Index, int> &b) {
-			return a.second > b.second;
+		std::vector<std::pair<Index, ContainedInfo>> list(containedInCountMap.begin(), containedInCountMap.end());
+		std::sort(list.begin(), list.end(), [](const std::pair<Index, ContainedInfo> &a, const std::pair<Index, ContainedInfo> &b) {
+			return a.second.Count == b.second.Count ? a.second.FirstContainedResultOffset < b.second.FirstContainedResultOffset : a.second.Count > b.second.Count;
 		});
 
 		auto write = outputIndices.begin();
