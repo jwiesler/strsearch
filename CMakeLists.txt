@@ -45,6 +45,7 @@ if(STRSEARCH_ENABLE_SHARED)
 		EXPORT_FILE_NAME dllexport.h
 		STATIC_DEFINE strsearchdll_BUILT_AS_STATIC)
 
+	target_compile_definitions(strsearchdll PRIVATE -fPIC)
 	set_target_properties(strsearchdll PROPERTIES 
 		PREFIX ""
 		OUTPUT_NAME "strsearch")
