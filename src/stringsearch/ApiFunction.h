@@ -1,6 +1,7 @@
 #pragma once
 #include "ApiDefinitions.h"
 #include <string_view>
+#include <tuple>
 
 namespace stringsearch::api {
 	template<typename T>
