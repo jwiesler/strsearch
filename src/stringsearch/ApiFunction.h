@@ -64,7 +64,7 @@ namespace stringsearch::api {
 			if(res != Result::Ok)
 				return res;
 
-			return ApiFunctionCaller<Args...>::call<Offset + sizeof...(Idx)>(f, std::forward<Tuple>(args), std::forward<UnwrappedArgs>(unwrappedArgs)..., A::convert(std::get<Offset + Idx>(args)...));
+			return ApiFunctionCaller<Args...>::template call<Offset + sizeof...(Idx)>(f, std::forward<Tuple>(args), std::forward<UnwrappedArgs>(unwrappedArgs)..., A::convert(std::get<Offset + Idx>(args)...));
 		}
 		
 		template<size_t Offset, typename F, typename Tuple, typename... UnwrappedArgs>
@@ -83,6 +83,6 @@ namespace stringsearch::api {
 
 	template<typename Signature, typename F, typename Tuple>
 	Result CallApiFunctionImplementation(F f, Tuple &&args) {
-		return ApiFunction<Signature>::Caller::call<0>(f, std::forward<Tuple>(args));
+		return ApiFunction<Signature>::Caller::template call<0>(f, std::forward<Tuple>(args));
 	}
 }

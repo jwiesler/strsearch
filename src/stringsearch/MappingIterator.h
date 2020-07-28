@@ -8,6 +8,7 @@ public:
 	using value_type = void;
 	using pointer = void;
 	using reference = void;
+	using difference_type = ptrdiff_t;
 
 	MappingOutputIterator(OutputIterator iterator, F f)
 		: F(f), iterator_(std::move(iterator)) {}
