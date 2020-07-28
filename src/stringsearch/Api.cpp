@@ -213,7 +213,7 @@ Result FindUniqueItemsKeywordsStrategy(const SearchInstance &search, const std::
 
 	Result r;
 	if(keywords.size() == 1) {
-		r = FindUniqueItemsInternal(search, pattern, outputIndices, result, offset, timings);
+		r = FindUniqueItemsInternal(search, keywords[0], outputIndices, result, offset, timings);
 	} else {
 		const auto findResults = Time(timings.Find, [&]() {
 			std::vector<FindResult> results;
