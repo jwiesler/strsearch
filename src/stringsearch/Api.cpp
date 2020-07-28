@@ -187,8 +187,8 @@ Result FindUniqueItems(const InstanceHandle instance, const char16_t *patternBeg
 
 std::vector<std::u16string_view> ParseKeywords(const std::u16string_view pattern) {
 	std::vector<std::u16string_view> keywords;
-	auto it = pattern.begin();
-	while(it != pattern.end()) {
+	
+	for(auto it = pattern.begin(); it != pattern.end(); ++it) {
 		if(*it == u' ')
 			continue;
 		const auto endIt = std::find(it, pattern.end(), u' ');
@@ -196,7 +196,6 @@ std::vector<std::u16string_view> ParseKeywords(const std::u16string_view pattern
 		it = endIt;
 		if(endIt == pattern.end())
 			break;
-		++it;
 	}
 	return keywords;
 }
