@@ -37,7 +37,7 @@ add_custom_command(TARGET libstrsearch PRE_BUILD
 if(STRSEARCH_ENABLE_SHARED)
 	message("Building shared library.")
 
-	add_library(strsearchdll SHARED "src/stringsearch/DllEntry.cpp")
+	add_library(strsearchdll SHARED "src/stringsearch/Api.cpp")
 
 	target_include_directories(strsearchdll PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
 	generate_export_header(strsearchdll 
