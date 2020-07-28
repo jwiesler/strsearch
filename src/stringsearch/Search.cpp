@@ -7,8 +7,21 @@
 #include <numeric>
 #include <vector>
 #include <unordered_map>
+#include "MappingIterator.h"
 
 namespace stringsearch {
+	void SortCountDescending(const Span<std::pair<Index, ContainedInfo>> items) {
+		std::sort(items.begin(), items.end(), [](const std::pair<Index, ContainedInfo> &a, const std::pair<Index, ContainedInfo> &b) {
+			return a.second.Count > b.second.Count;
+		});
+	}
+
+	void SortCountDescendingFirstContainedAscending(const Span<std::pair<Index, ContainedInfo>> items) {
+		std::sort(items.begin(), items.end(), [](const std::pair<Index, ContainedInfo> &a, const std::pair<Index, ContainedInfo> &b) {
+			return a.second.Count == b.second.Count ? a.second.FirstContainedResultOffset < b.second.FirstContainedResultOffset : a.second.Count > b.second.Count;
+		});
+	}
+
 	ItemsLookup::ItemsLookup(const std::u16string_view text) {
 		items_.reserve(text.size());
 
@@ -212,11 +225,7 @@ namespace stringsearch {
 		return isDuplicateInRange(begin, previousEntryOf(suffixArray_.indexOf(ptr)));
 	}
 
-	FindUniqueInAllResult UniqueSearchLookup::findUniqueInAllOf(const Span<const FindResult> results, const Span<Index> outputIndices) const {
-		struct ContainedInfo {
-			unsigned Count;
-			unsigned FirstContainedResultOffset;
-		};
+	std::vector<std::pair<Index, ContainedInfo>> UniqueSearchLookup::findUniquePatterns(const Span<const FindResult> results) const {
 		std::unordered_map<Index, ContainedInfo> containedInCountMap;
 		for(auto resultIt = results.begin(); resultIt != results.end(); ++resultIt) {
 			const auto &result = *resultIt;
@@ -233,18 +242,54 @@ namespace stringsearch {
 			}
 		}
 		
-		std::vector<std::pair<Index, ContainedInfo>> list(containedInCountMap.begin(), containedInCountMap.end());
-		std::sort(list.begin(), list.end(), [](const std::pair<Index, ContainedInfo> &a, const std::pair<Index, ContainedInfo> &b) {
-			return a.second.Count == b.second.Count ? a.second.FirstContainedResultOffset < b.second.FirstContainedResultOffset : a.second.Count > b.second.Count;
-		});
-
-		auto write = outputIndices.begin();
-		for(auto it = list.begin(); it != list.end() && write != outputIndices.end(); ++it, ++write) {
-			*write = it->first;
-		}
-		return FindUniqueInAllResult(list.size(), std::distance(outputIndices.begin(), write));
+		return {containedInCountMap.begin(), containedInCountMap.end()};
 	}
 
+	std::vector<Index> UniqueSearchLookup::findUniqueInAllPatterns(const Span<const FindResult> results) const {
+		std::vector<Index> indices;
+		if(results.empty())
+			return indices;
+
+		// Heuristic: Find the smallest range and initialize the map with it to keep the map small
+		const auto minIt = std::min_element(results.begin(), results.end(), [](const FindResult &a, const FindResult &b) {
+			return a.size() < b.size();
+		});
+
+		std::unordered_map<Index, unsigned> containedInCountMap;
+		for(auto it = uniqueItemsInRange(*minIt, 0); it != UniqueItemsIteratorEnd(); ++it) {
+			const auto suffix = *it;
+			const auto item = getItem(suffix);
+			const auto cit = containedInCountMap.find(item);
+			if(cit == containedInCountMap.end()) {
+				containedInCountMap.emplace(item, 1);
+			} else {
+				++cit->second;
+			}
+		}
+
+		for(auto resultIt = results.begin(); resultIt != results.end(); ++resultIt) {
+			if(resultIt == minIt)
+				continue;
+
+			const auto &result = *resultIt;
+			for(auto it = uniqueItemsInRange(result, 0); it != UniqueItemsIteratorEnd(); ++it) {
+				const auto suffix = *it;
+				const auto item = getItem(suffix);
+				const auto cit = containedInCountMap.find(item);
+				// if it is not contained in the map it was not contained in the first result range and can therefore be ignored
+				if(cit != containedInCountMap.end())
+					++cit->second;
+			}
+		}
+
+		std::copy_if(containedInCountMap.begin(), containedInCountMap.end(), Map(std::back_inserter(indices), [](const std::unordered_map<Index, unsigned>::value_type &p) {
+			return p.first;
+		}), [&](const std::unordered_map<Index, unsigned>::value_type &p) {
+			return p.second == results.size();
+		});
+		return indices;
+	}
+	
 	Search::Search(const std::u16string_view text)
 		: suffixArray_(text),
 			itemsLookup_(text, suffixArray()),
@@ -252,14 +297,6 @@ namespace stringsearch {
 
 	FindResult Search::find(const std::u16string_view pattern) const {
 		return suffixArray_.find(text_, pattern);
-	}
-
-	FindUniqueResult Search::findUnique(const FindResult result, const Span<Index> outputIndices, const unsigned int offset) const {
-		return itemsLookup().findUnique(result, outputIndices, offset);
-	}
-
-	FindUniqueInAllResult Search::findUniqueInAllOf(const Span<const FindResult> results, const Span<Index> outputIndices) const {
-		return itemsLookup().findUniqueInAllOf(results, outputIndices);
 	}
 
 	void UniqueItemsIterator::next() noexcept {
